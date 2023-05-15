@@ -14,14 +14,14 @@ contract AOSRing
         id2Addrs[id] = msg.sender;
         return true;
     }
-
+	
 
 	// p = p(u) = 36u^4 + 36u^3 + 24u^2 + 6u + 1
     uint256 constant FIELD_ORDER = 0x30644e72e131a029b85045b68181585d97816a916871ca8d3c208c16d87cfd47;
 
     // Number of elements in the field (often called `q`)
     // n = n(u) = 36u^4 + 36u^3 + 18u^2 + 6u + 1
-    uint256 constant GEN_ORDER = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
+    uint256 constant CURVE_ORDER = 0x30644e72e131a029b85045b68181585d2833e84879b9709143e1f593f0000001;
 
     uint256 constant CURVE_B = 3;
 
@@ -49,7 +49,7 @@ contract AOSRing
 	}
 
 	function N() pure internal returns (uint256) {
-		return GEN_ORDER;
+		return CURVE_ORDER;
 	}
 
 	/// return the generator of G1
@@ -64,7 +64,7 @@ contract AOSRing
         uint256 y = 0;
 
         // XXX: Gen Order (n) or Field Order (p) ?
-        uint256 x = s % GEN_ORDER;
+        uint256 x = s % CURVE_ORDER;
 
         while( true ) {
             (beta, y) = FindYforX(x);
@@ -107,10 +107,10 @@ contract AOSRing
         if(a>b) {
             a_nn = a;
         } else {
-            a_nn = a+GEN_ORDER;
+            a_nn = a+CURVE_ORDER;
         }
 
-        return addmod(a_nn - b, 0, GEN_ORDER);
+        return addmod(a_nn - b, 0, CURVE_ORDER);
     }
 
 
@@ -288,12 +288,34 @@ contract AOSRing
 	    G1Point memory kG = g1add(sG, g1mul(xG, e));
 	    return uint256(keccak256(abi.encodePacked(pubkey[0], pubkey[1], kG.X, kG.Y, message)));
 	}
+
+	function modPow(uint256 base, uint256 exponent, uint256 modulus) internal returns (uint256) {
+	    uint256[6] memory input = [32,32,32,base,exponent,modulus];
+	    uint256[1] memory result;
+	    assembly {
+	      if iszero(call(not(0), 0x05, 0, input, 0xc0, result, 0x20)) {
+	        revert(0, 0)
+	      }
+	    }
+	    return result[0];
+	}
 	
-	function VerifySchnorrProof( uint256[2] memory pubkey, uint256 message, uint256 s, uint256 e, string memory id)
+	function VSSVerify(uint256[] memory arr, uint256 len1, uint256 len2)
 	    public payable
 	    returns (bool)
 	{
-		require(id2Addrs[id] == msg.sender);
-	    return e == CalcProof(pubkey, message, s, e);
+		for(uint256 i=0;i<len1*2;i+=2) {
+			G1Point memory xG = g1mul(P1(), 0);
+			for(uint256 j=0;j<len2*2;j+=2) {
+				uint256 seg =len1+2*len1+len2;
+				G1Point memory comj = G1Point(arr[seg+j], arr[seg+j+1]);
+				uint256 ipowj = modPow(arr[i/2],arr[len1+2*len1+j/2],CURVE_ORDER);
+				xG = g1add(xG, g1mul(comj, ipowj)) ;
+			}
+			if(arr[len1+i] != xG.X || arr[len1+i+1]!= xG.Y){
+				return false;
+			}
+		}
+		return true;
 	}	
 }
