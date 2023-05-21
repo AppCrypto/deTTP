@@ -317,5 +317,22 @@ contract AOSRing
 			}
 		}
 		return true;
-	}	
+	}
+	function DELQVerify(G1Point[] memory g,G1Point[] memory y1,G1Point[] memory h,G1Point[] memory y2,uint256 c,G1Point[] memory a1,G1Point[] memory a2,uint256[] memory z,uint256 len)public payable returns(bool)
+	{
+	  for(uint256 i=0;i<len;i++)
+	  {
+             G1Point memory gG=g1mul(g[i],z[i]);
+             G1Point memory y1G=g1mul(y1[i],c);
+             
+             G1Point memory hG=g1mul(h[i],z[i]);
+             G1Point memory y2G=g1mul(y2[i],c);
+             
+             if((a1[i].X!=g1add(gG,y1G).X)||(a1[i].Y!=g1add(gG,y1G).Y)||(a2[i].X!=g1add(hG,y2G).X)||(a2[i].Y!=g1add(hG,y2G).Y))
+             {
+               return false;
+             }
+	     return true;
+	   }
+	 }
 }
