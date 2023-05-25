@@ -160,6 +160,7 @@ def FQ2IntArr2(fqArr):
       x.append(fq[1].n)
    return x
 
+
 def dleq(g, y1, h, y2, shares):
      # print(len(g),len(y1),len(h),len(y2),len(shares))
      w = random_scalar()
@@ -171,7 +172,10 @@ def dleq(g, y1, h, y2, shares):
      for i in range(0, len(y1)):
          # print(i,i in y1,i in y2)
          a1[i] = multiply(g[i], w)
-         a2[i] = multiply(h[i], w)
+         if isinstance(h,list):
+             a2[i] = multiply(h[i], w)
+         else:
+             a2[i] = multiply(h, w)
          z[i] = (w - shares[i+1] * c)  %  CURVE_ORDER 
      
      return c, a1, a2, z
@@ -179,9 +183,14 @@ def dleq(g, y1, h, y2, shares):
 
 def dleq_verify(g, y1, h, y2, c, a1, a2, z):
      for i in range(0, len(g)):
-         if a1[i] !=add(multiply(g[i], z[i]), multiply(y1[i+1], c)) \
-         or a2[i] !=add(multiply(h[i], z[i]), multiply(y2[i+1], c)):
-             return False
+         if isinstance(h,list):
+             if a1[i] !=add(multiply(g[i], z[i]), multiply(y1[i+1], c)) \
+             or a2[i] !=add(multiply(h[i], z[i]), multiply(y2[i+1], c)):
+                 return False
+         else:
+             if a1[i] !=add(multiply(g[i], z[i]), multiply(y1[i+1], c)) \
+             or a2[i] !=add(multiply(h, z[i]), multiply(y2[i+1], c)):
+                 return False             
      print("dleq_verify", True)
      return True
 
@@ -190,6 +199,7 @@ def Convert_type(data):
      return data_list
 
 
+    
 
 
 n=2
@@ -251,13 +261,13 @@ y1=Convert_type(gs.values())
 h=Convert_type([add(C['C0'],PKs[i]) for i in range(1, len(PKs))])
 y2=Convert_type(CK.values())
 
-#DLEQ
+#DLEQ_SmartContract
 gas_estimate_DELQ=ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).estimateGas()
 print("Sending transaction to DELQVerify ",gas_estimate_DELQ)
 ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to DELQVerify ",ret_DELQ)
 
-# TODO data owner uploads CK to smart contract
+# TODO data owner uploads CK to smart contract(finish)
 ctt.functions.UploadCK(Convert_type(CK.values()),2).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to UploadCK")
 gas_estimate_UploadCK=ctt.functions.UploadCK(Convert_type(CK.values()),2).estimateGas()
@@ -266,11 +276,13 @@ print("The gas of uploading CK ",gas_estimate_UploadCK)
 # print(K)
 # Key Delegation
 
-# TODO TTP downloads CK from smart contract
-CK_contract=ctt.functions.DownloadCK().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+# TODO TTP downloads CK from smart contract(finish)
+ctt.functions.DownloadCK().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to DownloadloadCK")
+
 gas_estimate_DownloadCK=ctt.functions.DownloadCK().estimateGas()
 print("The gas of downloading CK ",gas_estimate_DownloadCK)
+
 
 Kp={j: add(CK[j],neg(multiply(gs[j],SKs[j]))) for j in CK} #TTP extracts K from CK
 assert(Kp==K)
@@ -279,18 +291,49 @@ EK={}
 for j in K:
     l=random_scalar()
     EK[j]={"EK0":multiply(G1, l), "EK1":add(K[j], multiply(PKu,l))}#hide K into EK
+print("EK=",EK)
 
-# TODO TTP uploads EK to smart contract
-# ret_DELQ = ctt.functions.UploadEK(EK).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
-# print("Sending transaction to UploadEK ",ret_DELQ)
+EK_0=[]
+EK_1=[]
 
-# TODO data user downloads EK from smart contract
+for k in EK:
+    EK_0.append(EK[j].get("EK0"))
+    EK_1.append(EK[j].get("EK1"))
+
+# TODO TTP uploads EK to smart contract(finish)
+ctt.functions.UploadEK(Convert_type(EK_0),Convert_type(EK_1),2).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("Sending transaction to UploadEK")
+gas_estimate_UploadEK=ctt.functions.UploadEK(Convert_type(EK_0),Convert_type(EK_1),2).estimateGas()
+print("The gas of uploading EK ",gas_estimate_UploadEK)
+
+# TODO data user downloads EK from smart contract(finish)
+EK_contract_0=ctt.functions.DownloadEK_0().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("Sending transaction to DownloadloadEK_0")
+gas_estimate_DownloadEK_0=ctt.functions.DownloadEK_0().estimateGas()
+print("The gas of downloading EK_0 ",gas_estimate_DownloadEK_0)
+
+EK_contract_1=ctt.functions.DownloadEK_1().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("Sending transaction to DownloadloadEK_1")
+gas_estimate_DownloadEK_1=ctt.functions.DownloadEK_1().estimateGas()
+print("The gas of downloading EK_1 ",gas_estimate_DownloadEK_1)
 
 Kp={j: add(EK[j]["EK1"],neg(multiply(EK[j]["EK0"],SKu))) for j in EK} #Data user extracts K from EK
 assert(Kp==K)
-# TODO test equation 5 off the blockchain
+# TODO test equation 5 off the blockchain(finish)
+_c, _a1, _a2, _z= dleq([G1 for i in shares], gs, C['C0'] ,K,shares)
+DELQ_result=dleq_verify([G1 for i in shares], gs, C['C0'], K , _c, _a1, _a2, _z)
+print(DELQ_result)
 
-# TODO upload dispute to smart contract, i.e., equation 6
+# TODO upload dispute to smart contract, i.e., equation 6(finish)
+Dis=[]
+for i,j in zip(range(1,len(SKs)),EK):
+    Dis.append(multiply(EK[j].get("EK0"),SKs[i]))
+ctt.functions.UploadDispute(Convert_type(Dis),2).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("Sending transaction to UploadDispute")
+gas_estimate_UploadDispute=ctt.functions.UploadDispute(Convert_type(Dis),2).estimateGas()
+print("The gas of uploading dispute ",gas_estimate_UploadDispute)
+
+
 
 # THEGDecrypt
 W=multiply(G1, 0)
@@ -299,6 +342,5 @@ for i in Kp:
     W = add(W, tmp)
 
 print("data user obtain data owner's secret", add(C['C1'],neg(W))==m)    
-        
 
 

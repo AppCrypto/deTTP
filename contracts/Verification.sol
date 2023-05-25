@@ -335,18 +335,50 @@ contract AOSRing
 	     return true;
 	   }
 	 }
-      G1Point[] CK;
-  
-      function UploadCK(G1Point[] memory _CK,uint256 len) public payable
-      {
-        for(uint256 i=0;i&lt;len;i++)
-        {
-          CK.push(_CK[i]);
-        }
-      }
-  
-      function DownloadCK() public payable returns(G1Point[] memory)
-      {
-         return CK;
-       }
+	 
+	 G1Point[] CK;
+	 
+	 function UploadCK(G1Point[] memory _CK,uint256 len) public payable
+	 {
+	   for(uint256 i=0;i<len;i++)
+	   {
+	     CK.push(_CK[i]);
+	   }
+	 }
+	 
+	 function DownloadCK() public payable returns(G1Point[] memory)
+	 {
+	   return CK;
+	 }
+	 
+	 G1Point[] EK_0;
+	 G1Point[] EK_1;
+	 
+	 function UploadEK(G1Point[] memory _EK_0,G1Point[] memory _EK_1,uint256 len) public payable
+	 {
+	   for(uint256 i=0;i<len;i++)
+	   {
+	     EK_0.push(_EK_0[i]);
+	     EK_1.push(_EK_1[i]);
+	   }
+	 }
+	 
+	 function DownloadEK_0() public payable returns(G1Point[] memory)
+	 {
+	   return EK_0;
+	 }
+	 
+	 function DownloadEK_1() public payable returns(G1Point[] memory)
+	 {
+	   return EK_1;
+	 }
+	 G1Point[] Dis;
+	 function UploadDispute(G1Point[] memory _Dis,uint256 len) public payable
+	 {
+	   for(uint256 i=0;i<len;i++)
+	   {
+	     Dis.push(_Dis[i]);
+	   }
+	 }	 
+	 
 }
