@@ -335,19 +335,18 @@ contract AOSRing
 	     return true;
 	   }
 	 }
-	 G1Point[] CK;
+      G1Point[] CK;
   
-      function UploadCK(G1Point[] memory _CK,uint256 len) public returns(bool) 
+      function UploadCK(G1Point[] memory _CK,uint256 len) public payable
       {
         for(uint256 i=0;i&lt;len;i++)
         {
           CK.push(_CK[i]);
         }
-        return true;
       }
   
       function DownloadCK() public payable returns(G1Point[] memory)
       {
-        return CK;
-      }
+         return CK;
+       }
 }
