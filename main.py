@@ -191,7 +191,7 @@ def dleq_verify(g, y1, h, y2, c, a1, a2, z):
              if a1[i] !=add(multiply(g[i], z[i]), multiply(y1[i+1], c)) \
              or a2[i] !=add(multiply(h, z[i]), multiply(y2[i+1], c)):
                  return False             
-     print("dleq_verify", True)
+     # print("dleq_verify", True)
      return True
 
 def Convert_type(data):
@@ -224,6 +224,11 @@ for i in range(0, n):
 m=multiply(G1, random_scalar())
 r=random_scalar()
 C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
+starttime=time.time()
+for i in range(0,10):
+    C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
+print("elgamal encrypt cost:",(time.time()-starttime)/10. )
+
 
 # THEGKeygen
 secret = SKo
@@ -238,9 +243,13 @@ print("test recover_secret",recover_secret(shares_for_recovery)==secret)
 
 # Key Verification
 # vss_verify(gs,comj)
+starttime = time.time()
 c, a1, a2, z= dleq([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))] ,CK,shares)
-# dleq_verify([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))],CK,c, a1, a2, z)
+print("dleq time cost:",(time.time()- starttime)/len(PKs))
 
+starttime = time.time()
+dleq_verify([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))],CK,c, a1, a2, z)
+print("dleq_verify time cost:",(time.time()- starttime)/len(PKs))
 
 gsK=gs.keys()
 gsV=[gs[k] for k in shares]
@@ -253,7 +262,8 @@ gas_estimate = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2
 print("Sending transaction to VSSVerify ",gas_estimate)
 
 ret = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(comjV),len(gsK),len(comjK)).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
-print("Sending transaction to VSSVerify ",ret)
+# print("Sending transaction to VSSVerify ",ret)
+assert(ret)
 
 
 g=Convert_type([G1 for i in shares])
@@ -265,11 +275,12 @@ y2=Convert_type(CK.values())
 gas_estimate_DELQ=ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).estimateGas()
 print("Sending transaction to DELQVerify ",gas_estimate_DELQ)
 ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
-print("Sending transaction to DELQVerify ",ret_DELQ)
+# print("Sending transaction to DELQVerify ",ret_DELQ)
+assert(ret)
 
 # TODO data owner uploads CK to smart contract(finish)
-ctt.functions.UploadCK(Convert_type(CK.values()),2).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
-print("Sending transaction to UploadCK")
+ctt.functions.UploadCK(Convert_type(CK.values()),len(CK.values())).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+# print("Sending transaction to UploadCK")
 gas_estimate_UploadCK=ctt.functions.UploadCK(Convert_type(CK.values()),2).estimateGas()
 print("The gas of uploading CK ",gas_estimate_UploadCK)
 
@@ -278,7 +289,7 @@ print("The gas of uploading CK ",gas_estimate_UploadCK)
 
 # TODO TTP downloads CK from smart contract(finish)
 ctt.functions.DownloadCK().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
-print("Sending transaction to DownloadloadCK")
+# print("Sending transaction to DownloadloadCK")
 
 gas_estimate_DownloadCK=ctt.functions.DownloadCK().estimateGas()
 print("The gas of downloading CK ",gas_estimate_DownloadCK)
@@ -291,7 +302,7 @@ EK={}
 for j in K:
     l=random_scalar()
     EK[j]={"EK0":multiply(G1, l), "EK1":add(K[j], multiply(PKu,l))}#hide K into EK
-print("EK=",EK)
+# print("EK=",EK)
 
 EK_0=[]
 EK_1=[]
@@ -308,21 +319,23 @@ print("The gas of uploading EK ",gas_estimate_UploadEK)
 
 # TODO data user downloads EK from smart contract(finish)
 EK_contract_0=ctt.functions.DownloadEK_0().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
-print("Sending transaction to DownloadloadEK_0")
+# print("Sending transaction to DownloadloadEK_0")
 gas_estimate_DownloadEK_0=ctt.functions.DownloadEK_0().estimateGas()
 print("The gas of downloading EK_0 ",gas_estimate_DownloadEK_0)
 
 EK_contract_1=ctt.functions.DownloadEK_1().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
-print("Sending transaction to DownloadloadEK_1")
+# print("Sending transaction to DownloadloadEK_1")
 gas_estimate_DownloadEK_1=ctt.functions.DownloadEK_1().estimateGas()
 print("The gas of downloading EK_1 ",gas_estimate_DownloadEK_1)
-
+starttime=time.time()
 Kp={j: add(EK[j]["EK1"],neg(multiply(EK[j]["EK0"],SKu))) for j in EK} #Data user extracts K from EK
+print("elgamal decrypt cost:",(time.time()-starttime)/len(EK) )
+
 assert(Kp==K)
 # TODO test equation 5 off the blockchain(finish)
 _c, _a1, _a2, _z= dleq([G1 for i in shares], gs, C['C0'] ,K,shares)
 DELQ_result=dleq_verify([G1 for i in shares], gs, C['C0'], K , _c, _a1, _a2, _z)
-print(DELQ_result)
+assert(DELQ_result)
 
 # TODO upload dispute to smart contract, i.e., equation 6(finish)
 Dis=[]
