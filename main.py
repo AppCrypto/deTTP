@@ -211,7 +211,7 @@ for i in range(0, n):
 # THEGEncrypt
 m=multiply(G1, random_scalar())
 r=random_scalar()
-C={"C0":multiply(G1, r), "C1":add(m, PKo)}
+C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
 
 # THEGKeygen
 secret = random_scalar()
@@ -221,39 +221,40 @@ CK={j: add(K[j], multiply(PKs[j],shares[j])) for j in shares}
 # print(K)
 
 # Key Verification
-vss_verify(gs,comj)
+# vss_verify(gs,comj)
 c, a1, a2, z= dleq([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))] ,CK,shares)
-dleq_verify([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))],CK,c, a1, a2, z)
-shares_for_recovery = dict(random.sample(shares.items(), t))
-# print(shares_for_recovery)
+# dleq_verify([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))],CK,c, a1, a2, z)
 
-# Secret Delegation
-
-print(recover_secret(shares_for_recovery))
 
 gsK=gs.keys()
 gsV=[gs[k] for k in shares]
 comjK=comj.keys()
 comjV=[comj[k] for k in comj]
 
+# VSSVerify
 gas_estimate = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(comjV),len(gsK),len(comjK)).estimateGas()
 print("Sending transaction to VSSVerify ",gas_estimate)
 
 ret = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(comjV),len(gsK),len(comjK)).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to VSSVerify ",ret)
 
-# TTP send 
-#DLEQ
+
 g=Convert_type([G1 for i in shares])
 y1=Convert_type(gs.values())
 h=Convert_type([add(C['C0'],PKs[i]) for i in range(1, len(PKs))])
 y2=Convert_type(CK.values())
 
-
+#DLEQ
 gas_estimate_DELQ=ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).estimateGas()
 print("Sending transaction to DELQVerify ",gas_estimate_DELQ)
 ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to DELQVerify ",ret_DELQ)
-"""
+
+
+# Key Delegation
+
+shares_for_recovery = dict(random.sample(shares.items(), t))
+# print(shares_for_recovery)
+print(recover_secret(shares_for_recovery))
 
 
