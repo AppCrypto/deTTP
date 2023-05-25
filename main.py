@@ -130,19 +130,21 @@ def vss_verify(gs:Dict[int, int], comj:Dict[int, int]) -> bool:
    print("vss_verify",True)
    return True
 
+
+def lagrange_coefficient(i: int,keys) -> int:
+    result = 1
+    for j in keys:
+        if i != j:
+            result *= j * sympy.mod_inverse((j - i) % CURVE_ORDER, CURVE_ORDER)
+            result %= CURVE_ORDER
+    # print(result)
+    return result
+
+
 def recover_secret(shares: Dict[int, int]) -> int:
     """ Recovers a shared secret from t VALID shares.
     """
-
-    def lagrange_coefficient(i: int) -> int:
-        result = 1
-        for j in shares:
-            if i != j:
-                result *= j * sympy.mod_inverse((j - i) % CURVE_ORDER, CURVE_ORDER)
-                result %= CURVE_ORDER
-        return result
-
-    return sum(share * lagrange_coefficient(i) for i, share in shares.items()) % CURVE_ORDER
+    return sum(share * lagrange_coefficient(i, shares.keys()) for i, share in shares.items()) % CURVE_ORDER
 
 
 def FQ2IntArr(fqArr):
@@ -190,7 +192,7 @@ def Convert_type(data):
 
 
 
-n=6
+n=2
 t=int(n/2)+1
 # Registration
 SKo=random_scalar()
@@ -214,11 +216,15 @@ r=random_scalar()
 C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
 
 # THEGKeygen
-secret = random_scalar()
+secret = SKo
 shares,gs,comj,sgs=vss_share_secret(secret,n,t)
+# shares,gs,comj,sgs=vss_share_secret(SKo,n,t)
 K={j: multiply(C["C0"], shares[j]) for j in shares}
 CK={j: add(K[j], multiply(PKs[j],shares[j])) for j in shares}
-# print(K)
+shares_for_recovery = dict(random.sample(shares.items(), t))
+# # print(shares_for_recovery)
+print("test recover_secret",recover_secret(shares_for_recovery)==secret)
+
 
 # Key Verification
 # vss_verify(gs,comj)
@@ -230,6 +236,7 @@ gsK=gs.keys()
 gsV=[gs[k] for k in shares]
 comjK=comj.keys()
 comjV=[comj[k] for k in comj]
+
 
 # VSSVerify
 gas_estimate = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(comjV),len(gsK),len(comjK)).estimateGas()
@@ -250,11 +257,40 @@ print("Sending transaction to DELQVerify ",gas_estimate_DELQ)
 ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to DELQVerify ",ret_DELQ)
 
+# TODO data owner uploads CK to smart contract
 
+# print(K)
 # Key Delegation
 
-shares_for_recovery = dict(random.sample(shares.items(), t))
-# print(shares_for_recovery)
-print(recover_secret(shares_for_recovery))
+# TODO TTP downloads CK from smart contract
+
+Kp={j: add(CK[j],neg(multiply(gs[j],SKs[j]))) for j in CK} #TTP extracts K from CK
+assert(Kp==K)
+
+EK={}
+for j in K:
+    l=random_scalar()
+    EK[j]={"EK0":multiply(G1, l), "EK1":add(K[j], multiply(PKu,l))}#hide K into EK
+
+# TODO TTP uploads EK to smart contract
+# ret_DELQ = ctt.functions.UploadEK(EK).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+# print("Sending transaction to UploadEK ",ret_DELQ)
+
+# TODO data user downloads EK from smart contract
+
+Kp={j: add(EK[j]["EK1"],neg(multiply(EK[j]["EK0"],SKu))) for j in EK} #Data user extracts K from EK
+assert(Kp==K)
+# TODO test equation 5 off the blockchain
+
+# TODO upload dispute to smart contract, i.e., equation 6
+
+# THEGDecrypt
+W=multiply(G1, 0)
+for i in Kp:    
+    tmp = multiply(Kp[i], lagrange_coefficient(i, Kp.keys()))
+    W = add(W, tmp)
+
+print("data user obtain data owner's secret", add(C['C1'],neg(W))==m)    
+        
 
 
