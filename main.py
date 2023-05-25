@@ -183,6 +183,10 @@ def dleq_verify(g, y1, h, y2, c, a1, a2, z):
      print("dleq_verify", True)
      return True
 
+def Convert_type(data):
+     data_list=[[int(x) for x in list] for list in data]
+     return data_list
+
 
 
 
@@ -239,5 +243,17 @@ ret = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(c
 print("Sending transaction to VSSVerify ",ret)
 
 # TTP send 
+#DLEQ
+g=Convert_type([G1 for i in shares])
+y1=Convert_type(gs.values())
+h=Convert_type([add(C['C0'],PKs[i]) for i in range(1, len(PKs))])
+y2=Convert_type(CK.values())
+
+
+gas_estimate_DELQ=ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).estimateGas()
+print("Sending transaction to DELQVerify ",gas_estimate_DELQ)
+ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("Sending transaction to DELQVerify ",ret_DELQ)
+"""
 
 
