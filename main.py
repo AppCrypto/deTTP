@@ -258,11 +258,19 @@ ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2
 print("Sending transaction to DELQVerify ",ret_DELQ)
 
 # TODO data owner uploads CK to smart contract
+ctt.functions.UploadCK(Convert_type(CK.values()),2).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("Sending transaction to UploadCK")
+gas_estimate_UploadCK=ctt.functions.UploadCK(Convert_type(CK.values()),2).estimateGas()
+print("The gas of uploading CK ",gas_estimate_UploadCK)
 
 # print(K)
 # Key Delegation
 
 # TODO TTP downloads CK from smart contract
+CK_contract=ctt.functions.DownloadCK().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("Sending transaction to DownloadloadCK")
+gas_estimate_DownloadCK=ctt.functions.DownloadCK().estimateGas()
+print("The gas of downloading CK ",gas_estimate_DownloadCK)
 
 Kp={j: add(CK[j],neg(multiply(gs[j],SKs[j]))) for j in CK} #TTP extracts K from CK
 assert(Kp==K)
