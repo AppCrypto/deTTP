@@ -181,7 +181,24 @@ def dleq(g, y1, h, y2, shares):
      return c, a1, a2, z
 
 
+def Dispute_dleq(g, y1, h, y2, SKu):
+     # print(len(g),len(y1),len(h),len(y2),len(shares))
+     w = random_scalar()
+     a1=[0 for i in range(0,len(y2))]
+     a2=[0 for i in range(0,len(y2))]
+     c = int(hash(str(y1)+str(y2)),16)
+     z = (w - SKu * c)  %  CURVE_ORDER
+     for i in range(0, len(y2)):
+         # print(i,i in y1,i in y2)
+         a1[i] = multiply(g[i], w)
+         a2[i] = multiply(h[i], w)
+         a2[i] = multiply(h[i], w)
+          
+     
+     return c, a1, a2, z
+
 def dleq_verify(g, y1, h, y2, c, a1, a2, z):
+    
      for i in range(0, len(g)):
          if isinstance(h,list):
              if a1[i] !=add(multiply(g[i], z[i]), multiply(y1[i+1], c)) \
@@ -193,11 +210,36 @@ def dleq_verify(g, y1, h, y2, c, a1, a2, z):
                  return False             
      # print("dleq_verify", True)
      return True
+"""
+def Dispute_dleq_verify(g, y1, h, y2, c, a1, a2, z):
+     
+     for i in range(0, len(g)):
+         if a1[i] !=add(multiply(g[i], z), multiply(y1,c)) \
+         or a2[i] !=add(multiply(h[i], z), multiply(y2[i], c)):
+             return False
+         
+     # print("dleq_verify", True)
+     return True
+"""
 
-def Convert_type(data):
-     data_list=[[int(x) for x in list] for list in data]
-     return data_list
+def Dispute_dleq_verify(g, y1, h, y2, c, a1, a2, z):
+    
+     for i in range(0, len(g)):
+         if isinstance(h,list):
+             if a1[i] !=add(multiply(g[i], z[i]), multiply(y1[i], c)) \
+             or a2[i] !=add(multiply(h[i], z[i]), multiply(y2[i], c)):
+                 return False
+         else:
+             if a1[i] !=add(multiply(g[i], z[i]), multiply(y1[i], c)) \
+             or a2[i] !=add(multiply(h, z[i]), multiply(y2[i], c)):
+                 return False             
+     # print("dleq_verify", True)
+     return True
 
+     
+def Convert_type_list(data):
+    data_list=[[int(x) for x in list] for list in data]
+    return data_list
 
     
 
@@ -210,7 +252,11 @@ PKo=multiply(G1, SKo)
 
 
 SKu=random_scalar()
+
+
 PKu=multiply(G1, SKu)
+
+
 
 SKs=[0]
 PKs=[multiply(G1, 0)]
@@ -266,22 +312,23 @@ ret = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(c
 assert(ret)
 
 
-g=Convert_type([G1 for i in shares])
-y1=Convert_type(gs.values())
-h=Convert_type([add(C['C0'],PKs[i]) for i in range(1, len(PKs))])
-y2=Convert_type(CK.values())
+g=Convert_type_list([G1 for i in shares])
+y1=Convert_type_list(gs.values())
+h=Convert_type_list([add(C['C0'],PKs[i]) for i in range(1, len(PKs))])
+y2=Convert_type_list(CK.values())
+
 
 #DLEQ_SmartContract
-gas_estimate_DELQ=ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).estimateGas()
+gas_estimate_DELQ=ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type_list(a1),Convert_type_list(a2),z).estimateGas()
 print("Sending transaction to DELQVerify ",gas_estimate_DELQ)
-ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type(a1),Convert_type(a2),z,n).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
+ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type_list(a1),Convert_type_list(a2),z).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
 # print("Sending transaction to DELQVerify ",ret_DELQ)
 assert(ret)
 
 # TODO data owner uploads CK to smart contract(finish)
-ctt.functions.UploadCK(Convert_type(CK.values()),len(CK.values())).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+ctt.functions.UploadCK(Convert_type_list(CK.values())).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
 # print("Sending transaction to UploadCK")
-gas_estimate_UploadCK=ctt.functions.UploadCK(Convert_type(CK.values()),2).estimateGas()
+gas_estimate_UploadCK=ctt.functions.UploadCK(Convert_type_list(CK.values())).estimateGas()
 print("The gas of uploading CK ",gas_estimate_UploadCK)
 
 # print(K)
@@ -312,9 +359,9 @@ for k in EK:
     EK_1.append(EK[j].get("EK1"))
 
 # TODO TTP uploads EK to smart contract(finish)
-ctt.functions.UploadEK(Convert_type(EK_0),Convert_type(EK_1),2).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+ctt.functions.UploadEK(Convert_type_list(EK_0),Convert_type_list(EK_1)).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to UploadEK")
-gas_estimate_UploadEK=ctt.functions.UploadEK(Convert_type(EK_0),Convert_type(EK_1),2).estimateGas()
+gas_estimate_UploadEK=ctt.functions.UploadEK(Convert_type_list(EK_0),Convert_type_list(EK_1)).estimateGas()
 print("The gas of uploading EK ",gas_estimate_UploadEK)
 
 # TODO data user downloads EK from smart contract(finish)
@@ -338,14 +385,27 @@ DELQ_result=dleq_verify([G1 for i in shares], gs, C['C0'], K , _c, _a1, _a2, _z)
 assert(DELQ_result)
 
 # TODO upload dispute to smart contract, i.e., equation 6(finish)
-Dis=[]
-for i,j in zip(range(1,len(SKs)),EK):
-    Dis.append(multiply(EK[j].get("EK0"),SKs[i]))
-ctt.functions.UploadDispute(Convert_type(Dis),2).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
+Dis=[]  
+for j in EK_0:
+    Dis.append(multiply(j,SKu))
+
+Dis_c, Dis_a1, Dis_a2, Dis_z= Dispute_dleq([G1 for i in shares], PKu, EK_0 ,Dis,SKu)
+result=Dispute_dleq_verify([G1 for i in EK_0], [PKu for i in EK_0], EK_0,Dis, Dis_c, Dis_a1, Dis_a2, [Dis_z for i in EK_0])
+print("result=",result)
+
+ctt.functions.UploadDispute(Convert_type_list([G1 for i in EK_0]), Convert_type_list([PKu for i in EK_0]), Convert_type_list(EK_0) ,Convert_type_list(Dis),Dis_c ,Convert_type_list(Dis_a1),Convert_type_list(Dis_a2),[Dis_z for i in EK_0]).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
 print("Sending transaction to UploadDispute")
-gas_estimate_UploadDispute=ctt.functions.UploadDispute(Convert_type(Dis),2).estimateGas()
+gas_estimate_UploadDispute=ctt.functions.UploadDispute(Convert_type_list([G1 for i in EK_0]), Convert_type_list([PKu for i in EK_0]), Convert_type_list(EK_0) ,Convert_type_list(Dis),Dis_c ,Convert_type_list(Dis_a1),Convert_type_list(Dis_a2),[Dis_z for i in EK_0]).estimateGas()
 print("The gas of uploading dispute ",gas_estimate_UploadDispute)
 
+
+# TODO Verify dispute
+
+
+gas_estimate_Dis_DELQ=ctt.functions.DELQVerify(Convert_type_list([G1 for i in EK_0]), Convert_type_list([PKu for i in EK_0]), Convert_type_list(EK_0) ,Convert_type_list(Dis),Dis_c ,Convert_type_list(Dis_a1),Convert_type_list(Dis_a2),[Dis_z for i in EK_0]).estimateGas()
+print("The gas of dispute DELQVerify is",gas_estimate_Dis_DELQ)
+ret_Dis_DELQ = ctt.functions.DELQVerify(Convert_type_list([G1 for i in EK_0]), Convert_type_list([PKu for i in EK_0]), Convert_type_list(EK_0) ,Convert_type_list(Dis),Dis_c ,Convert_type_list(Dis_a1),Convert_type_list(Dis_a2),[Dis_z for i in EK_0]).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
+print("The result of dispute DELQVerify is",ret_Dis_DELQ)
 
 
 # THEGDecrypt
@@ -355,5 +415,4 @@ for i in Kp:
     W = add(W, tmp)
 
 print("data user obtain data owner's secret", add(C['C1'],neg(W))==m)    
-
 
