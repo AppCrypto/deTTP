@@ -318,9 +318,9 @@ contract AOSRing
 		}
 		return true;
 	}
-	function DELQVerify(G1Point[] memory g,G1Point[] memory y1,G1Point[] memory h,G1Point[] memory y2,uint256 c,G1Point[] memory a1,G1Point[] memory a2,uint256[] memory z,uint256 len)public payable returns(bool)
+	function DELQVerify(G1Point[] memory g,G1Point[] memory y1,G1Point[] memory h,G1Point[] memory y2,uint256 c,G1Point[] memory a1,G1Point[] memory a2,uint256[] memory z)public payable returns(bool)
 	{
-	  for(uint256 i=0;i<len;i++)
+	  for(uint256 i=0;i<g.length;i++)
 	  {
              G1Point memory gG=g1mul(g[i],z[i]);
              G1Point memory y1G=g1mul(y1[i],c);
@@ -336,11 +336,12 @@ contract AOSRing
 	   }
 	 }
 	 
+	 
 	 G1Point[] CK;
 	 
-	 function UploadCK(G1Point[] memory _CK,uint256 len) public payable
+	 function UploadCK(G1Point[] memory _CK) public payable
 	 {
-	   for(uint256 i=0;i<len;i++)
+	   for(uint256 i=0;i<_CK.length;i++)
 	   {
 	     CK.push(_CK[i]);
 	   }
@@ -354,9 +355,9 @@ contract AOSRing
 	 G1Point[] EK_0;
 	 G1Point[] EK_1;
 	 
-	 function UploadEK(G1Point[] memory _EK_0,G1Point[] memory _EK_1,uint256 len) public payable
+	 function UploadEK(G1Point[] memory _EK_0,G1Point[] memory _EK_1) public payable
 	 {
-	   for(uint256 i=0;i<len;i++)
+	   for(uint256 i=0;i<_EK_0.length;i++)
 	   {
 	     EK_0.push(_EK_0[i]);
 	     EK_1.push(_EK_1[i]);
@@ -372,13 +373,21 @@ contract AOSRing
 	 {
 	   return EK_1;
 	 }
-	 G1Point[] Dis;
-	 function UploadDispute(G1Point[] memory _Dis,uint256 len) public payable
-	 {
-	   for(uint256 i=0;i<len;i++)
-	   {
-	     Dis.push(_Dis[i]);
-	   }
-	 }	 
+	   
 	 
+	 G1Point[] Dis;
+	 
+	 
+	 function UploadDispute(G1Point[] memory g,G1Point[] memory y1,G1Point[] memory h,G1Point[] memory y2,uint256 c,G1Point[] memory a1,G1Point[] memory a2,uint256[] memory z) public payable returns(bool)
+	 {
+	   if(!DELQVerify(g,y1,h,y2,c,a1,a2,z))
+	   {
+	     return false;
+	   }
+	   for(uint256 i=0;i<y2.length;i++)
+	   {
+	     Dis.push(y2[i]);
+	   }
+	   return true;
+	 }	 	 
 }
