@@ -244,8 +244,9 @@ def Convert_type_list(data):
     
 
 
-n=2
+n=16
 t=int(n/2)+1
+print(n,t)
 # Registration
 SKo=random_scalar()
 PKo=multiply(G1, SKo)
@@ -297,18 +298,18 @@ print("### Secret Hiding time cost", time.time() - starttime)
 # Key Verification
 starttime = time.time()
 dleq_verify([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))],CK,c, a1, a2, z)
-print("dleq_verify time cost:",(time.time()- starttime)/len(PKs))
+# print("dleq_verify time cost:",(time.time()- starttime)/len(PKs))
 
 gsK=gs.keys()
 gsV=[gs[k] for k in shares]
 comjK=comj.keys()
 comjV=[comj[k] for k in comj]
 
-
+gasCost=0
 # VSSVerify
 gas_estimate = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(comjV),len(gsK),len(comjK)).estimateGas()
 print("Sending transaction to VSSVerify ",gas_estimate)
-
+gasCost+=gas_estimate
 ret = ctt.functions.VSSVerify(list(gsK)+FQ2IntArr2(gsV)+list(comjK)+FQ2IntArr2(comjV),len(gsK),len(comjK)).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
 # print("Sending transaction to VSSVerify ",ret)
 assert(ret)
@@ -323,10 +324,13 @@ y2=Convert_type_list(CK.values())
 #DLEQ_SmartContract
 gas_estimate_DELQ=ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type_list(a1),Convert_type_list(a2),z).estimateGas()
 print("Sending transaction to DELQVerify ",gas_estimate_DELQ)
-ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type_list(a1),Convert_type_list(a2),z).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
+gasCost+=gas_estimate_DELQ
+
+# ret_DELQ = ctt.functions.DELQVerify(g,y1,h,y2,c,Convert_type_list(a1),Convert_type_list(a2),z).call({'from':w3.eth.accounts[0],'gas': 500_000_000})
 # print("Sending transaction to DELQVerify ",ret_DELQ)
 assert(ret)
-
+print("### Key Verification gas cost", gasCost,str(gas_estimate)+"+"+str(gas_estimate_DELQ))
+# exit()
 # TODO data owner uploads CK to smart contract(finish)
 ctt.functions.UploadCK(Convert_type_list(CK.values())).transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
 # print("Sending transaction to UploadCK")
@@ -335,7 +339,6 @@ print("The gas of uploading CK ",gas_estimate_UploadCK)
 
 # print(K)
 # Key Delegation
-
 # TODO TTP downloads CK from smart contract(finish)
 ctt.functions.DownloadCK().transact({'from':w3.eth.accounts[0],'gas': 500_000_000})
 # print("Sending transaction to DownloadloadCK")
