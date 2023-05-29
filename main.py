@@ -270,29 +270,31 @@ for i in range(0, n):
 m=multiply(G1, random_scalar())
 r=random_scalar()
 C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
-starttime=time.time()
-for i in range(0,10):
-    C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
-print("elgamal encrypt cost:",(time.time()-starttime)/10. )
+# starttime=time.time()
+# for i in range(0,10):
+#     C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
+# print("elgamal encrypt cost:",(time.time()-starttime)/10. )
 
 
 # THEGKeygen
+starttime = time.time()
 secret = SKo
 shares,gs,comj,sgs=vss_share_secret(secret,n,t)
-# shares,gs,comj,sgs=vss_share_secret(SKo,n,t)
+# vss_verify(gs,comj)
 K={j: multiply(C["C0"], shares[j]) for j in shares}
 CK={j: add(K[j], multiply(PKs[j],shares[j])) for j in shares}
-shares_for_recovery = dict(random.sample(shares.items(), t))
-# # print(shares_for_recovery)
-print("test recover_secret",recover_secret(shares_for_recovery)==secret)
+# shares_for_recovery = dict(random.sample(shares.items(), t))
+# print("test recover_secret",recover_secret(shares_for_recovery)==secret)
 
+C={"C0":multiply(G1, r), "C1":add(m, multiply(PKo,r))}
+
+c, a1, a2, z= dleq([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))] ,CK,shares)
+
+Kp_c, Kp_a1, Kp_a2, Kp_z =  dleq([G1 for i in shares], gs, [C['C0'] for i in range(1, len(PKs))], K, shares)
+
+print("### Secret Hiding time cost", time.time() - starttime)
 
 # Key Verification
-# vss_verify(gs,comj)
-starttime = time.time()
-c, a1, a2, z= dleq([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))] ,CK,shares)
-print("dleq time cost:",(time.time()- starttime)/len(PKs))
-
 starttime = time.time()
 dleq_verify([G1 for i in shares], gs, [add(C['C0'],PKs[i]) for i in range(1, len(PKs))],CK,c, a1, a2, z)
 print("dleq_verify time cost:",(time.time()- starttime)/len(PKs))
@@ -341,7 +343,7 @@ ctt.functions.DownloadCK().transact({'from':w3.eth.accounts[0],'gas': 500_000_00
 gas_estimate_DownloadCK=ctt.functions.DownloadCK().estimateGas()
 print("The gas of downloading CK ",gas_estimate_DownloadCK)
 
-
+starttime = time.time()
 Kp={j: add(CK[j],neg(multiply(gs[j],SKs[j]))) for j in CK} #TTP extracts K from CK
 assert(Kp==K)
 
@@ -349,7 +351,8 @@ EK={}
 for j in K:
     l=random_scalar()
     EK[j]={"EK0":multiply(G1, l), "EK1":add(K[j], multiply(PKu,l))}#hide K into EK
-# print("EK=",EK)
+
+print("### Key Delegation time cost", time.time() - starttime)
 
 EK_0=[]
 EK_1=[]
@@ -408,11 +411,19 @@ ret_Dis_DELQ = ctt.functions.DELQVerify(Convert_type_list([G1 for i in EK_0]), C
 print("The result of dispute DELQVerify is",ret_Dis_DELQ)
 
 
+
+# EGDecrypt
+starttime = time.time()
+Kp={j: add(EK[j]["EK1"],neg(multiply(EK[j]["EK0"],SKu))) for j in EK} #Data user extracts K from EK
+# Verify Kp
+dleq_verify([G1 for i in shares], gs, [C['C0'] for i in range(1, len(PKs))],Kp,Kp_c, Kp_a1, Kp_a2, Kp_z)
 # THEGDecrypt
 W=multiply(G1, 0)
 for i in Kp:    
     tmp = multiply(Kp[i], lagrange_coefficient(i, Kp.keys()))
     W = add(W, tmp)
+mp=add(C['C1'],neg(W))
+print("### Secret Recovery time cost", time.time() - starttime)
 
-print("data user obtain data owner's secret", add(C['C1'],neg(W))==m)    
+print("data user obtain data owner's secret", mp==m)    
 
