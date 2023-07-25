@@ -55,7 +55,7 @@ for i in range(3):
 fee=0
 fee = Contract.functions.date_user_fee(accounts0).transact({'from': accounts0})
 
-#根据每次任务更换value值，因为我没法做到将以太坊返回值fee变为下一行代码的value，所以采用了手动计算
+#根据每次任务更换value值，因为我没法做到将以太坊返回值fee变为下一行代码的value，所以采用了手动计算输入
 Contract.functions.date_user_pay(accounts0).transact({'from': accounts0, 'value': 90000000000000000000 })
 
 Contract.functions.success_distribute(accounts0).transact({'from': accounts0})
