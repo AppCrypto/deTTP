@@ -46,7 +46,7 @@ Contract = w3.eth.contract(address=contract_address, abi=abi)
 accounts9 = w3.eth.accounts[9]
 
 #Test gas for successful task execution
-Contract.functions.new_task(accounts9,accounts0,30000000000000000000,3).transact({'from': accounts0})
+Contract.functions.new_task(accounts9,accounts0,30000000000000000000,3).transact({'from': accounts0})   #create new task
 for i in range(3):
 	accounts = w3.eth.accounts[i]
 	Contract.functions.TTP_EDA_i(1000000000000000000,10000000000000000000,20).transact({'from': accounts})
