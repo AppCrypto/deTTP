@@ -73,7 +73,8 @@ accounts8 = w3.eth.accounts[8]
 Contract.functions.TTP_EDA_i(1000000000000000000,10000000000000000000,20).transact({'from': accounts8})
 Contract.functions.deposit(accounts4).transact({'from': accounts8, 'value': 9000000000000000000})
 Contract.functions.record(accounts4,10).transact({'from': accounts8})
-time.sleep(360)
+#There is a delay time that is less than the blockchain time set in the code, causing the code to report an error. 存在延迟时间小于代码中设置的测试区块链时间导致代码报错
+time.sleep(120)
 Contract.functions.fail_distribute(accounts4).transact({'from': accounts0})
 Contract.functions.updateCY_i(accounts4).transact({'from': accounts0})
 
