@@ -5,7 +5,24 @@
 set -x
 
 # 启动 Ganache CLI 并将输出重定向到临时文件
-ganache --mnemonic "dttp" > ganache_output.txt &
+OS=$(uname -s)
+ 
+case "$OS" in
+  Linux*)
+    echo "Linux"
+    ganache --mnemonic "dttp" > ganache_output.txt &
+    ;;
+  Darwin*)
+    echo "macOS"
+    ganache-cli --mnemonic "dttp" > ganache_output.txt &
+    ;;
+  CYGWIN*|MINGW32*|MSYS*|MINGW*)
+    echo "Windows"
+    ;;
+  *)
+    echo "Unknown OS"
+    ;;
+esac
 
 # 等待 Ganache CLI 完全启动
 sleep 5

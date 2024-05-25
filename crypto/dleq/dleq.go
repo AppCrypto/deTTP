@@ -1,4 +1,4 @@
-package dieq
+package dleq
 
 import (
 	"crypto/rand"

@@ -1,8 +1,7 @@
-package dieq_test
+package dleq_test
 
 import (
 	"crypto/rand"
-	"dttp/crypto/dieq"
 	"fmt"
 	"math/big"
 	"testing"
@@ -29,13 +28,13 @@ func TestMyFunction(t *testing.T) {
 	x := new(big.Int)
 	x.SetString("18565186733591291362307462130219129409737445814581163957621748889988504982598", 10)
 	//生成证明（xH和xG拥有相同的指数x，xH=x*H,xG=x*G）
-	c, z, xG, xH, rG, rH, err := dieq.NewDLEQProof(G, H, x)
+	c, z, xG, xH, rG, rH, err := dleq.NewDLEQProof(G, H, x)
 	if err != nil {
 		fmt.Println("Failed to create DLEQ proof:", err)
 		return
 	}
 
-	rtn := dieq.Verify(c, z, G, H, xG, xH, rG, rH)
+	rtn := dleq.Verify(c, z, G, H, xG, xH, rG, rH)
 
 	if rtn == nil {
 		fmt.Printf("\n\nPeggy has proven she still knows her secret")
@@ -57,14 +56,14 @@ func TestMyFunction(t *testing.T) {
 	}
 
 	// 生成多个 DLEQ 证明
-	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, err := dieq.Mul_NewDLEQProof(mul_G, mul_H, mul_X)
+	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, err := dleq.Mul_NewDLEQProof(mul_G, mul_H, mul_X)
 	if err != nil {
 		t.Errorf("Failed to create multiple DLEQ proofs: %v", err)
 		return
 	}
 
 	// 验证生成的证明
-	err = dieq.Mul_Verify(mul_C, mul_Z, mul_G, mul_H, mul_XG, mul_XH, mul_RG, mul_RH)
+	err = dleq.Mul_Verify(mul_C, mul_Z, mul_G, mul_H, mul_XG, mul_XH, mul_RG, mul_RH)
 	if err != nil {
 		t.Errorf("Verification failed: %v", err)
 		return
