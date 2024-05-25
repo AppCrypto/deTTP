@@ -2,6 +2,7 @@ package dleq_test
 
 import (
 	"crypto/rand"
+	"dttp/crypto/dleq"
 	"fmt"
 	"math/big"
 	"testing"
