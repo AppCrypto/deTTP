@@ -7,7 +7,7 @@
 
 执行命令：
 
-	1、执行./stract.sh————将私钥保存到.env文件内
+	1、执行./strart.sh————将私钥保存到.env文件内
 	2、执行comlile文件夹的main.go————(输入要合约名字)进行compile和abigen
 	3、执行ganache --mnemonic "dttp"————开启dttp的gananche
 	4、执行main.go
