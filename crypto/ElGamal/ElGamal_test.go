@@ -7,7 +7,7 @@ import(
       "testing"
 )
 
-func TestElGmalFunction(t *testing.T){
+func TestElGamalFunction(t *testing.T){
       //生成加密者的公私钥对
       sk,pk:=ElGmal.EGSetup()
       //生成一个明文信息
