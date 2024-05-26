@@ -1,8 +1,7 @@
-package Threshold_ElGmal
+package Threshold_ElGamal
 
 import (
 	"crypto/rand"
-	"crypto/sha256"
 	"fmt"
 	"math/big"
 	"dttp/crypto/vss"
@@ -89,4 +88,3 @@ func THEGDecrypt(CK *CK, Key []*bn256.G1, indices []*big.Int, threshold int)(*bn
 	_m:=new(bn256.G1).Add(CK.CK1, new(bn256.G1).Neg(Recover_Key))
 	return _m
 }
-
