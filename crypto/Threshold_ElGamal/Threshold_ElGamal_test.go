@@ -1,7 +1,7 @@
 package Threshold_ElGamal_test
 
 import(
-  "dttp/crypto/Threshold_ElGmal"
+  "dttp/crypto/Threshold_ElGamal"
   "fmt"
   "math/big"
   "crypto/rand"
