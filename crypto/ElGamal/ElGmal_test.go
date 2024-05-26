@@ -9,6 +9,6 @@ import(
 
 func TestElGmalFunction(t *testing.T){
       //生成加密者的公私钥对
-      sk,pk:=
+      sk,pk:=ElGmal.
   
 }
