@@ -41,4 +41,3 @@ func EGDecrypt(EK *EK, sk *big.Int)(*bn256.G1){
 	_K:=new(bn256.G1).Add(EK.EK1,new(bn256.G1).Neg(new(bn256.G1).ScalarMult(EK.EK0,sk)))
 	return _K
 }
-
