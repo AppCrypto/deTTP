@@ -5,7 +5,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"math/big"
-
+	"dttp/crypto/vss"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/google"
 )
 
@@ -36,7 +36,7 @@ func THEGEncrypt(m *big.Int, PK *bn256.G1)(*CK){
 }
 
 func THEGKenGen(CK *CK, SK *big.Int, n, t int)([]*bn256.G1){
-	VSS_SK,_:=GenerateShares(SK, t, n)
+	VSS_SK,_:=vss.GenerateShares(SK, t, n)
 	K := make([]*bn256.G1, n)
 	for i:=0;i<n;i++{
 		K[i]=new(bn256.G1).ScalarMult(CK.CK0,VSS_SK.Shares[i])
@@ -80,10 +80,7 @@ func recoverKey(Key []*bn256.G1, indices []*big.Int, order *big.Int, threshold i
 			Recover_Key= new(bn256.G1).Add(Recover_Key,new(bn256.G1).ScalarMult(Key[i],term))
 	}
 	return Recover_Key
-}
-
-
-		
+}	
 
 func THEGDecrypt(CK *CK, Key []*bn256.G1, indices []*big.Int, threshold int)(*bn256.G1){
 	
