@@ -1,4 +1,4 @@
-package ElGmal_test
+package ElGamal_test
 
 import(
       "dttp/crypto/ElGmal"
