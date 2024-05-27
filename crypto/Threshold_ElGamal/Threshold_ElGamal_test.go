@@ -28,7 +28,8 @@ func TestThresholdElGmalFunction(t *testing.T){
       //加密明文信息
 	CK:=Threshold_ElGamal.THEGEncrypt(m,pko)
       //生成加密的密钥份额
-	Key:=Threshold_ElGamal.THEGKenGen(CK, sko, numShares, threshold)
+	VSS_SK,Key:=Threshold_ElGamal.THEGKenGen(CK, sko, numShares, threshold)
+	fmt.Printf("映射后的秘密份额为：%s\n", VSS_SK.Gs)
       //解密密文信息
 	_m:=Threshold_ElGamal.THEGDecrypt(CK, Key, selectedIndices, threshold)
 	fmt.Printf("解密信息为：%s\n",_m.String())
