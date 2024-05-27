@@ -10,9 +10,9 @@ import (
 
 var order=bn256.Order
 
-type CK struct {
-	CK0 *bn256.G1 
-	CK1 *bn256.G1
+type C struct {
+	C0 *bn256.G1 
+	C1 *bn256.G1
 }
 
 func THEGSetup()(*big.Int, *bn256.G1){
@@ -21,24 +21,24 @@ func THEGSetup()(*big.Int, *bn256.G1){
     return sk,pk
 }
 
-func THEGEncrypt(m *big.Int, PK *bn256.G1)(*CK){
+func THEGEncrypt(m *big.Int, PK *bn256.G1)(*C){
 	fmt.Printf("明文信息为：%s\n",m)
 	fmt.Printf("明文映射后的信息为：%s\n",new(bn256.G1).ScalarBaseMult(m).String())
 	r,_ := rand.Int(rand.Reader, order)
-	ck0:=new(bn256.G1).ScalarBaseMult(r)
-	ck1:=new(bn256.G1).Add(new(bn256.G1).ScalarBaseMult(m),new(bn256.G1).ScalarMult(PK,r))
+	c0:=new(bn256.G1).ScalarBaseMult(r)
+	c1:=new(bn256.G1).Add(new(bn256.G1).ScalarBaseMult(m),new(bn256.G1).ScalarMult(PK,r))
 	
-	return &CK{
-		CK0:ck0,
-		CK1:ck1,
+	return &C{
+		C0:c0,
+		C1:c1,
 	}
 }
 
-func THEGKenGen(CK *CK, SK *big.Int, n, t int)(*vss.SecretSharing, []*bn256.G1){
+func THEGKenGen(C *C, SK *big.Int, n, t int)(*vss.SecretSharing, []*bn256.G1){
 	VSS_SK,_:=vss.GenerateShares(SK, t, n)
 	K := make([]*bn256.G1, n)
 	for i:=0;i<n;i++{
-		K[i]=new(bn256.G1).ScalarMult(CK.CK0,VSS_SK.Shares[i])
+		K[i]=new(bn256.G1).ScalarMult(C.C0,VSS_SK.Shares[i])
 	}
 	return VSS_SK,K
 }
@@ -81,11 +81,10 @@ func recoverKey(Key []*bn256.G1, indices []*big.Int, order *big.Int, threshold i
 	return Recover_Key
 }	
 
-func THEGDecrypt(CK *CK, Key []*bn256.G1, indices []*big.Int, threshold int)(*bn256.G1){
+func THEGDecrypt(C *C, Key []*bn256.G1, indices []*big.Int, threshold int)(*bn256.G1){
 	
 	Recover_Key:=recoverKey(Key, indices, order, threshold)
 	//解密密文信息
-	_m:=new(bn256.G1).Add(CK.CK1, new(bn256.G1).Neg(Recover_Key))
+	_m:=new(bn256.G1).Add(C.C1, new(bn256.G1).Neg(Recover_Key))
 	return _m
 }
-
