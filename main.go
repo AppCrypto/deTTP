@@ -64,7 +64,7 @@ func main() {
 	auth2 := utils.New_auth(client, privatekey, chainID, value)
 
 	// 调用set方法设置值
-	setValue := big.NewInt(12345)
+	setValue := "12345"
 	//调用set函数
 	tx, err := Contract.Set(auth2, setValue)
 	if err != nil {
@@ -77,5 +77,5 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to execute get call: %v", err)
 	}
-	fmt.Printf("Stored value: %s\n", storedValue.String())
+	fmt.Printf("Stored value: %s\n", storedValue)
 }
