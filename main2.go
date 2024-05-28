@@ -80,7 +80,7 @@ func main() {
 
 	_, _ = instance, tx
 
-	server := getENV("SERVER")
+	server := getENV("http://127.0.0.1:8545")
 	fmt.Println("Server: ", server)
 
 	client, err = ethclient.Dial(server)
