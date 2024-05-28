@@ -11,8 +11,8 @@ import (
 var order=bn256.Order
 
 type EK struct {
-	EK0 *bn256.G1 
-	EK1 *bn256.G1
+	EK0 []*bn256.G1 
+	EK1 []*bn256.G1
 }
 
 func EGSetup()(*big.Int, *bn256.G1){
@@ -21,14 +21,15 @@ func EGSetup()(*big.Int, *bn256.G1){
     return sk,pk
 }
 
-
-func EGEncrypt(K *big.Int, PK *bn256.G1)(*EK){
-	fmt.Printf("明文信息为：%s\n",K)
-	fmt.Printf("明文映射后的信息为：%s\n",new(bn256.G1).ScalarBaseMult(K).String())
+func EGEncrypt(K []*bn256.G1, PK *bn256.G1, numShares int)(*EK){
+	ek0:=make([]*bn256.G1,numShares)
+	ek1:=make([]*bn256.G1,numShares)
+	fmt.Printf("加密信息为：%s\n",K)
 	l,_ := rand.Int(rand.Reader, order)
-	ek0:=new(bn256.G1).ScalarBaseMult(l)
-	ek1:=new(bn256.G1).Add(new(bn256.G1).ScalarBaseMult(K),new(bn256.G1).ScalarMult(PK,l))
-	
+	for i:=0;i<numShares;i++{
+		ek0[i]=new(bn256.G1).ScalarBaseMult(l)
+		ek1[i]=new(bn256.G1).Add(K[i],new(bn256.G1).ScalarMult(PK,l))
+	}
 	return &EK{
 		EK0:ek0,
 		EK1:ek1,
@@ -36,8 +37,11 @@ func EGEncrypt(K *big.Int, PK *bn256.G1)(*EK){
 }
 
 
-func EGDecrypt(EK *EK, sk *big.Int)(*bn256.G1){
+func EGDecrypt(EK *EK, sk *big.Int, numShares int)([]*bn256.G1){
 	//解密密文信息
-	_K:=new(bn256.G1).Add(EK.EK1,new(bn256.G1).Neg(new(bn256.G1).ScalarMult(EK.EK0,sk)))
+	_K:=make([]*bn256.G1,numShares)
+	for i:=0;i<numShares;i++{
+		_K[i]=new(bn256.G1).Add(EK.EK1[i],new(bn256.G1).Neg(new(bn256.G1).ScalarMult(EK.EK0[i],sk)))
+	}
 	return _K
 }
