@@ -11,15 +11,15 @@ import(
 var order=bn256.Order
 
 func TestElGamalFunction(t *testing.T){
-      //生成加密者的公私钥对
+      //Generates a key pair of the encryptor 
       sk,pk:=ElGamal.EGSetup()
-      //生成一个明文信息
+      //Generate a plaintext
       k,_:=rand.Int(rand.Reader, order)
       K:=make([]*bn256.G1,1)
       K[0]= new(bn256.G1).ScalarBaseMult(k)
-      //对该明文信息进行加密
+      //Encrypt the plaintext to ciphertext
       EK:=ElGamal.EGEncrypt(K,pk,len(K))
-      //对密文信息进行解密
+      //Decrypt the ciphertext
 	  _K:=ElGamal.EGDecrypt(EK,sk,len(K))
 	  fmt.Printf("解密后的明文信息：%s\n",_K)
 }
