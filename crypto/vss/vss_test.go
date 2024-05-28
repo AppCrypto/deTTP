@@ -39,15 +39,8 @@ func TestMyFunction(t *testing.T) {
 	}
 
 	// 验证份额
-	fmt.Println("\nVerifying shares:")
-	for i, share := range ss.Shares {
-		x := big.NewInt(int64(i + 1))
-		if vss.VerifyShare(share, x, ss.Commitments) {
-			fmt.Printf("Share %d is valid\n", i+1)
-		} else {
-			fmt.Printf("Share %d is invalid\n", i+1)
-		}
-	}
+	result:=vss.VerifyShare(ss.Gs, ss.Commitments)
+	fmt.Printf("VSS验证结果为：%v\n",result)
 
 	//恢复秘密
 	selectedShares := ss.Shares[:threshold]
