@@ -299,7 +299,9 @@ contract Verification
 	    }
 	    return result[0];
 	}
-	
+
+	//The algotithm VerifyShare
+	//arr is the Gs 
 	function VSSVerify(uint256[] memory arr, uint256 len1, uint256 len2)
 	    public payable
 	    returns (bool)
@@ -318,6 +320,8 @@ contract Verification
 		}
 		return true;
 	}
+
+	//The algorithm dleq.Mul_Verify
 	function DELQVerify(G1Point[] memory g,G1Point[] memory y1,G1Point[] memory h,G1Point[] memory y2,uint256 c,G1Point[] memory a1,G1Point[] memory a2,uint256[] memory z)public payable returns(bool)
 	{
 	  for(uint256 i=0;i<g.length;i++)
@@ -337,7 +341,7 @@ contract Verification
 	 }
 	 
 	 
-	 G1Point[] CK;
+	 G1Point[] CK; //CK is the CKey
 	 
 	 function UploadCK(G1Point[] memory _CK) public payable
 	 {
@@ -351,7 +355,8 @@ contract Verification
 	 {
 	   return CK;
 	 }
-	 
+
+	 //EK is the EKey
 	 G1Point[] EK_0;
 	 G1Point[] EK_1;
 	 
@@ -374,7 +379,7 @@ contract Verification
 	   return EK_1;
 	 }
 	   
-	 
+	 //Dis is the DIS
 	 G1Point[] Dis;
 	 
 	 
