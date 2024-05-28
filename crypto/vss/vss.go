@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"math/big"
+	"fmt"
 
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/google"
 )
@@ -92,19 +93,43 @@ func evaluatePolynomial(coefficients []*big.Int, x, order *big.Int) *big.Int {
 }
 
 // VerifyShare 根据承诺验证给定的密钥分享
+/*
 func VerifyShare(share, x *big.Int, commitments []*bn256.G1) bool {
 	left := new(bn256.G1).ScalarBaseMult(share)
 	right := new(bn256.G1)
-
 	xPower := big.NewInt(1)
+
 	for _, commitment := range commitments {
 		temp := new(bn256.G1).ScalarMult(commitment, xPower)
 		right.Add(right, temp)
 		xPower.Mul(xPower, x)
 		xPower.Mod(xPower, bn256.Order)
 	}
-
 	return left.String() == right.String()
+}
+*/
+
+// VerifyShare 根据承诺验证给定的密钥分享
+func VerifyShare(Gs, commitments []*bn256.G1) bool {
+	var right *bn256.G1
+	var xPower *big.Int
+	var x *big.Int	
+	for i:=0;i<len(Gs);i++{
+		right = new(bn256.G1)
+		xPower = big.NewInt(1)
+		x = big.NewInt(int64(i + 1))
+		for _, commitment := range commitments {
+			temp := new(bn256.G1).ScalarMult(commitment, xPower)
+			right.Add(right, temp)
+			xPower.Mul(xPower, x)
+			xPower.Mod(xPower, bn256.Order)
+		}
+		if !(Gs[i].String() == right.String()){
+			fmt.Printf("第%d组存在错误！",i)
+			return false
+		}
+	}
+	return true
 }
 
 // lagrangeInterpolation 使用拉格朗日插值法恢复密钥
