@@ -43,7 +43,7 @@ func main() {
 	//获得第一个账户的私钥
 	privatekey := utils.GetENV("PRIVATE_KEY_1")
 	fmt.Println(privatekey)
-	privatekey = "75a4b8695e5d35ba5d3f897bb837d03bde178bfe9682ded4687d895e4cf77486"
+
 	if err != nil {
 		panic(err)
 	}
