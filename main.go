@@ -22,11 +22,9 @@ func main() {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
 	//获取chainID
-	chainID, err := client.ChainID(context.Background())
 	if err != nil {
 		log.Fatalf("Failed to retrieve network ID: %v", err)
 	}
-	utils.SetChainID(chainID)
 	//获得第一个账户的私钥
 	privatekey := utils.GetENV("PRIVATE_KEY_1")
 	fmt.Println(privatekey)
@@ -35,11 +33,10 @@ func main() {
 		panic(err)
 	}
 	// 构建新交易(gasLimit--gas限制，value--交易值)
-	value := big.NewInt(0)
-	auth1 := utils.New_auth(client, privatekey, value)
+	auth1 := utils.Transact(client, privatekey, big.NewInt(0))
 
 	//部署合约（服务器，区块链ID，合约名称，私钥）
-	address, tx0 := utils.Deploy(client, chainID, contract_name, auth1)
+	address, tx0 := utils.Deploy(client, contract_name, auth1)
 	//获取部署合约的gas值
 	receipt, err := bind.WaitMined(context.Background(), client, tx0)
 	if err != nil {
@@ -50,28 +47,19 @@ func main() {
 	//构建调用合约实体
 	Contract, err := contract.NewContract(common.HexToAddress(address.Hex()), client)
 	if err != nil {
-		fmt.Println("实体构建错误: ", err)
+		fmt.Println(err)
 	}
-	// 构建新交易
-	value = big.NewInt(0)
-	auth2 := utils.New_auth(client, privatekey, value)
 
-	// 调用set方法设置值
-	setValue := "dadasda"
-	//调用set函数
-	tx, err := Contract.Set(auth2, setValue)
-	if err != nil {
-		log.Fatalf("Failed to execute set transaction: %v", err)
-	}
+	auth2 := utils.Transact(client, privatekey, big.NewInt(0))
+	//invoke Set
+	tx, _ := Contract.Set(auth2, "dadasda")
+
 	receipt, _ = bind.WaitMined(context.Background(), client, tx)
 	fmt.Printf("Set() Gas used: %d\n", receipt.GasUsed)
 
 	// fmt.Printf("Set transaction hash: %s\n", tx.Hash().Hex())
 
 	// 调用get方法获取值
-	storedValue, err := Contract.Get(&bind.CallOpts{})
-	if err != nil {
-		log.Fatalf("Failed to execute get call: %v", err)
-	}
+	storedValue, _ := Contract.Get(&bind.CallOpts{})
 	fmt.Printf("Stored value: %s\n", storedValue)
 }

@@ -19,10 +19,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var chainID *big.Int
-
-// 将contract文件夹下的合约部署在区块链上
-func Deploy(client *ethclient.Client, chainID *big.Int, contract_name string, auth *bind.TransactOpts) (common.Address, *types.Transaction) {
+// deploy abi files and obtain bin interface
+func Deploy(client *ethclient.Client, contract_name string, auth *bind.TransactOpts) (common.Address, *types.Transaction) {
 	// 读取智能合约的 ABI 和字节码
 	abiBytes, err := os.ReadFile("compile/contract/" + contract_name + ".abi")
 	if err != nil {
@@ -49,53 +47,29 @@ func Deploy(client *ethclient.Client, chainID *big.Int, contract_name string, au
 	return address, tx
 }
 
-// 创建交易签名
-func New_auth(client *ethclient.Client, privatekey string, value *big.Int) *bind.TransactOpts {
-	// 获取账户密钥
-	key, err := crypto.HexToECDSA(privatekey)
-	if err != nil {
-		log.Fatalf("Failed to load private key: %v", err)
-	}
-
-	// 获取账户地址
+// construct a transaction
+func Transact(client *ethclient.Client, privatekey string, value *big.Int) *bind.TransactOpts {
+	key, _ := crypto.HexToECDSA(privatekey)
 	publicKey := key.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatalf("Failed to cast public key to ECDSA")
-	}
-
+	publicKeyECDSA, _ := publicKey.(*ecdsa.PublicKey)
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-
-	// 获取 nonce
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
 		log.Fatalf("Failed to get nonce: %v", err)
 	}
 
-	// 设置交易参数
 	gasLimit := uint64(3000000)
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		log.Fatalf("Failed to get gas price: %v", err)
 	}
-
-	// 发送交易
-	auth, err := bind.NewKeyedTransactorWithChainID(key, GetChainID())
-	if err != nil {
-		log.Fatalf("Failed to create authorized transactor: %v", err)
-	}
+	chainID, err := client.ChainID(context.Background())
+	auth, _ := bind.NewKeyedTransactorWithChainID(key, chainID)
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = value
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 	return auth
-}
-func GetChainID() *big.Int {
-	return chainID
-}
-
-func SetChainID(chid *big.Int) {
-	chainID = chid
 }
 
 // 读取.env文件
