@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"dttp/compile/contract"
+	"dttp/utils"
 	"fmt"
 	"log"
 	"math/big"
@@ -29,7 +30,7 @@ func getENV(key string) string {
 
 func main() {
 
-	client, err := ethclient.Dial(getENV("SERVER"))
+	client, err := ethclient.Dial("http://127.0.0.1:8545")
 	if err != nil {
 		panic(err)
 	}
@@ -55,7 +56,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
+	utils.SetChainID(chainID)
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		panic(err)
@@ -80,10 +81,7 @@ func main() {
 
 	_, _ = instance, tx
 
-	server := getENV("http://127.0.0.1:8545")
-	fmt.Println("Server: ", server)
-
-	client, err = ethclient.Dial(server)
+	client, err = ethclient.Dial("http://127.0.0.1:8545")
 	if err != nil {
 		panic(err)
 	}
@@ -98,13 +96,13 @@ func main() {
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-
+	auth2 := utils.New_auth(client, getENV("PRIVATE_KEY_1"), big.NewInt(0))
 	// Routes
 	e.GET("/greet/:message",
 		func(c echo.Context) error {
 			message := c.Param("message")
 			fmt.Println(message)
-			reply, err := conn.Set(&bind.TransactOpts{}, message)
+			reply, err := conn.Set(auth2, message)
 			if err != nil {
 				return err
 			}

@@ -26,6 +26,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to retrieve network ID: %v", err)
 	}
+	utils.SetChainID(chainID)
 	//获得第一个账户的私钥
 	privatekey := utils.GetENV("PRIVATE_KEY_1")
 	fmt.Println(privatekey)
@@ -35,7 +36,7 @@ func main() {
 	}
 	// 构建新交易(gasLimit--gas限制，value--交易值)
 	value := big.NewInt(0)
-	auth1 := utils.New_auth(client, privatekey, chainID, value)
+	auth1 := utils.New_auth(client, privatekey, value)
 
 	//部署合约（服务器，区块链ID，合约名称，私钥）
 	address, tx0 := utils.Deploy(client, chainID, contract_name, auth1)
@@ -44,7 +45,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("Gas used: %d\n", receipt.GasUsed)
+	fmt.Printf("Deploy Gas used: %d\n", receipt.GasUsed)
 
 	//构建调用合约实体
 	Contract, err := contract.NewContract(common.HexToAddress(address.Hex()), client)
@@ -53,7 +54,7 @@ func main() {
 	}
 	// 构建新交易
 	value = big.NewInt(0)
-	auth2 := utils.New_auth(client, privatekey, chainID, value)
+	auth2 := utils.New_auth(client, privatekey, value)
 
 	// 调用set方法设置值
 	setValue := "dadasda"
@@ -62,8 +63,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to execute set transaction: %v", err)
 	}
+	receipt, _ = bind.WaitMined(context.Background(), client, tx)
+	fmt.Printf("Set() Gas used: %d\n", receipt.GasUsed)
 
-	fmt.Printf("Set transaction hash: %s\n", tx.Hash().Hex())
+	// fmt.Printf("Set transaction hash: %s\n", tx.Hash().Hex())
 
 	// 调用get方法获取值
 	storedValue, err := Contract.Get(&bind.CallOpts{})
@@ -72,4 +75,3 @@ func main() {
 	}
 	fmt.Printf("Stored value: %s\n", storedValue)
 }
-

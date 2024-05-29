@@ -19,6 +19,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var chainID *big.Int
+
 // 将contract文件夹下的合约部署在区块链上
 func Deploy(client *ethclient.Client, chainID *big.Int, contract_name string, auth *bind.TransactOpts) (common.Address, *types.Transaction) {
 	// 读取智能合约的 ABI 和字节码
@@ -48,7 +50,7 @@ func Deploy(client *ethclient.Client, chainID *big.Int, contract_name string, au
 }
 
 // 创建交易签名
-func New_auth(client *ethclient.Client, privatekey string, chainID *big.Int, value *big.Int) *bind.TransactOpts {
+func New_auth(client *ethclient.Client, privatekey string, value *big.Int) *bind.TransactOpts {
 	// 获取账户密钥
 	key, err := crypto.HexToECDSA(privatekey)
 	if err != nil {
@@ -78,7 +80,7 @@ func New_auth(client *ethclient.Client, privatekey string, chainID *big.Int, val
 	}
 
 	// 发送交易
-	auth, err := bind.NewKeyedTransactorWithChainID(key, chainID)
+	auth, err := bind.NewKeyedTransactorWithChainID(key, GetChainID())
 	if err != nil {
 		log.Fatalf("Failed to create authorized transactor: %v", err)
 	}
@@ -87,6 +89,13 @@ func New_auth(client *ethclient.Client, privatekey string, chainID *big.Int, val
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
 	return auth
+}
+func GetChainID() *big.Int {
+	return chainID
+}
+
+func SetChainID(chid *big.Int) {
+	chainID = chid
 }
 
 // 读取.env文件
@@ -97,4 +106,3 @@ func GetENV(key string) string {
 	}
 	return os.Getenv(key)
 }
-
