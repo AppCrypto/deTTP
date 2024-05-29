@@ -301,7 +301,8 @@ contract Verification
 	}
 
 	//The algotithm VerifyShare
-	//arr is the Gs 
+	//arr is a list: the index of Gs + the x, y point of Gs + the index of commitments+ the x and y point of commitments
+	//len1 is the length of Gs, len2 is the length of commitment
 	function VSSVerify(uint256[] memory arr, uint256 len1, uint256 len2)
 	    public payable
 	    returns (bool)
@@ -322,6 +323,7 @@ contract Verification
 	}
 
 	//The algorithm dleq.Mul_Verify
+	//y1=
 	function DELQVerify(G1Point[] memory g,G1Point[] memory y1,G1Point[] memory h,G1Point[] memory y2,uint256 c,G1Point[] memory a1,G1Point[] memory a2,uint256[] memory z)public payable returns(bool)
 	{
 	  for(uint256 i=0;i<g.length;i++)
