@@ -2,45 +2,25 @@
 package utils
 
 import (
-	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
 	"log"
 	"math/big"
 	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/joho/godotenv"
 )
 
-// 将contract文件夹下的合约编译
-func Compile(contract_name string) {
-	// 定义要执行的命令和参数
-	cmd := exec.Command("solc", "--abi", "--bin", "-o", ".", contract_name+".sol", "--overwrite")
-	cmd.Dir = "./contract"
-	// 捕获标准输出和标准错误
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	// 执行命令
-	err := cmd.Run()
-	if err != nil {
-		log.Fatalf("Failed to execute command: %v, %s", err, stderr.String())
-	}
-	// 打印标准输出
-	fmt.Println(out.String())
-}
-
 // 将contract文件夹下的合约部署在区块链上
-func Deploy(client *ethclient.Client, chainID *big.Int, contract_name string, auth *bind.TransactOpts) string {
+func Deploy(client *ethclient.Client, chainID *big.Int, contract_name string, auth *bind.TransactOpts) (common.Address, *types.Transaction) {
 	// 读取智能合约的 ABI 和字节码
 	abiBytes, err := os.ReadFile("compile/contract/" + contract_name + ".abi")
 	if err != nil {
@@ -64,27 +44,7 @@ func Deploy(client *ethclient.Client, chainID *big.Int, contract_name string, au
 	}
 	fmt.Printf("Contract deployed! Address: %s\n", address.Hex())
 	fmt.Printf("Transaction hash: %s\n", tx.Hash().Hex())
-	return address.Hex()
-}
-
-// 根据contract文件夹下的.sol文件生成.go文件，变成go语言可以访问的接口
-func Abigen(contract_name string) {
-	// 定义要执行的命令和参数
-	cmd := exec.Command("abigen", "--bin="+contract_name+".bin", "--abi="+contract_name+".abi", "--pkg=contract", "--out="+contract_name+".go")
-	cmd.Dir = "./contract"
-	// 捕获标准输出和标准错误
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	// 执行命令
-	err := cmd.Run()
-	if err != nil {
-		log.Fatalf("Failed to execute command: %v, %s", err, stderr.String())
-	}
-	// 打印标准输出
-	fmt.Println(out.String())
-	fmt.Println("abigen is successs")
+	return address, tx
 }
 
 // 创建交易签名
@@ -137,3 +97,4 @@ func GetENV(key string) string {
 	}
 	return os.Getenv(key)
 }
+
