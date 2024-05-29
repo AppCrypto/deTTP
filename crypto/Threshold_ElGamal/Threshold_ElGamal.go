@@ -22,8 +22,7 @@ func THEGSetup()(*big.Int, *bn256.G1){
 }
 
 func THEGEncrypt(m *big.Int, PK *bn256.G1)(*C){
-	fmt.Printf("明文信息为：%s\n",m)
-	fmt.Printf("明文映射后的信息为：%s\n",new(bn256.G1).ScalarBaseMult(m).String())
+	fmt.Printf("The plaintxt is %s\n",new(bn256.G1).ScalarBaseMult(m).String())
 	r,_ := rand.Int(rand.Reader, order)
 	c0:=new(bn256.G1).ScalarBaseMult(r)
 	c1:=new(bn256.G1).Add(new(bn256.G1).ScalarBaseMult(m),new(bn256.G1).ScalarMult(PK,r))
