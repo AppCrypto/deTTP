@@ -19,9 +19,9 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// deploy abi files and obtain bin interface
+// deploy contract and obtain abi interface and bin of source code
 func Deploy(client *ethclient.Client, contract_name string, auth *bind.TransactOpts) (common.Address, *types.Transaction) {
-	// 读取智能合约的 ABI 和字节码
+
 	abiBytes, err := os.ReadFile("compile/contract/" + contract_name + ".abi")
 	if err != nil {
 		log.Fatalf("Failed to read ABI file: %v", err)
@@ -32,7 +32,6 @@ func Deploy(client *ethclient.Client, contract_name string, auth *bind.TransactO
 		log.Fatalf("Failed to read BIN file: %v", err)
 	}
 
-	// 解析 ABI
 	parsedABI, err := abi.JSON(strings.NewReader(string(abiBytes)))
 	if err != nil {
 		log.Fatalf("Failed to parse ABI: %v", err)
@@ -72,7 +71,6 @@ func Transact(client *ethclient.Client, privatekey string, value *big.Int) *bind
 	return auth
 }
 
-// 读取.env文件
 func GetENV(key string) string {
 	err := godotenv.Load(".env")
 	if err != nil {
