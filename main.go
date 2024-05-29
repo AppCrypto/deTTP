@@ -1,17 +1,3 @@
-/*
-使用说明：
-
-	1、使用前下载solc,abigen配置全局变量，下载命令行ganache
-	1、使用时将.sol文件放入compile/contract文件夹，根据.sol文件生成的abi,bin,.go都在此文件夹内。
-	2、每个go的实例具体化方法名称都不一样（一般New+合约名），记得查询后修改。
-
-执行命令：
-
-	1、执行./strart.sh————将私钥保存到.env文件内
-	2、执行comlile文件夹的main.go————(输入要合约名字)进行compile和abigen
-	3、执行ganache --mnemonic "dttp"————开启dttp的gananche
-	4、执行main.go
-*/
 package main
 
 import (
@@ -52,10 +38,16 @@ func main() {
 	auth1 := utils.New_auth(client, privatekey, chainID, value)
 
 	//部署合约（服务器，区块链ID，合约名称，私钥）
-	address := utils.Deploy(client, chainID, contract_name, auth1)
+	address, tx0 := utils.Deploy(client, chainID, contract_name, auth1)
+	//获取部署合约的gas值
+	receipt, err := bind.WaitMined(context.Background(), client, tx0)
+	if err != nil {
+		log.Fatalf("Tx receipt failed: %v", err)
+	}
+	fmt.Printf("Gas used: %d\n", receipt.GasUsed)
 
 	//构建调用合约实体
-	Contract, err := contract.NewContract(common.HexToAddress(address), client)
+	Contract, err := contract.NewContract(common.HexToAddress(address.Hex()), client)
 	if err != nil {
 		fmt.Println("实体构建错误: ", err)
 	}
@@ -64,12 +56,13 @@ func main() {
 	auth2 := utils.New_auth(client, privatekey, chainID, value)
 
 	// 调用set方法设置值
-	setValue := "12345"
+	setValue := "dadasda"
 	//调用set函数
 	tx, err := Contract.Set(auth2, setValue)
 	if err != nil {
 		log.Fatalf("Failed to execute set transaction: %v", err)
 	}
+
 	fmt.Printf("Set transaction hash: %s\n", tx.Hash().Hex())
 
 	// 调用get方法获取值
@@ -79,3 +72,4 @@ func main() {
 	}
 	fmt.Printf("Stored value: %s\n", storedValue)
 }
+
