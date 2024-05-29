@@ -62,6 +62,7 @@ threshold:=3
     C:=Threshold_ElGamal.THEGEncrypt(m,pko)
     fmt.Printf("The ciphertext C is %s\n",C)
     //Generate the PVSS shares Key of sko, the share commitment Commitments and {g^si} and publish Commitments and {g^si} on the blockchain
+    //TODO：test the time cost of THEGKeyGen with the number change of TTPs 
     VSS_SK,Key:=Threshold_ElGamal.THEGKenGen(C, sko, numShares, threshold)
     
     //Data owner uses the TTPs' public keys to encrypt Key to CKey and publishes CKey on the blockchain
@@ -152,9 +153,10 @@ threshold:=3
     fmt.Printf("The result of DLEQVrf(prfs'_s) is %v\n",Error)
     //Data user decrypts the ciphertext to plaintext _m
     KeyIndices := make([]*big.Int, threshold)
-	for i := 0; i < threshold; i++ {
-		KeyIndices[i] = big.NewInt(int64(i + 1))
-	}
+    for i := 0; i < threshold; i++ {
+	KeyIndices[i] = big.NewInt(int64(i + 1))
+    }
+    //TODO：test the time cost of THEGDecrypt with the number change of TTPs 
     _m:=Threshold_ElGamal.THEGDecrypt(C, _Key, KeyIndices, threshold)
     fmt.Printf("The plaintext _m is %s\n",_m)
 //-------------------Dispute-------------------//
