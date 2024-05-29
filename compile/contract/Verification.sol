@@ -323,7 +323,7 @@ contract Verification
 	}
 
 	//The algorithm dleq.Mul_Verify
-	//y1=
+	//y1[i]=g^s[i],y2[i]=h^s[i],c=hash(y1+y2),a1[i]=g^w,a2[i]=h^w,(w is a random value), z[i]=w-s[i]*c
 	function DELQVerify(G1Point[] memory g,G1Point[] memory y1,G1Point[] memory h,G1Point[] memory y2,uint256 c,G1Point[] memory a1,G1Point[] memory a2,uint256[] memory z)public payable returns(bool)
 	{
 	  for(uint256 i=0;i<g.length;i++)
