@@ -1,14 +1,7 @@
-# Example of deployment smart contracts to EVM using GoLang
+# Proof of Concept codes of `Data exchange for the metaverse with accountable decentralized arbitrators and an incentive mechanism`
 
-Here is a simple and convenient golang code utilizes `go-ethereum`,`abigen` and `solc` to deploy the smart contract and intract with the smart contract.
-
-Follow these steps to make it easy to deploy the contracts and intract with smart contracts.
 
 # Pre requisites
-
-* `Ubuntu OS`  Version: Ubuntu 22.04.4 LTS
-
-* `VS code`
 
 * `Golang`  https://go.dev/dl/   Version：1.22.0 linux/amd64
 
@@ -49,30 +42,25 @@ Version: 0.8.25-develop
 
 # How to use it
 
-1. Before compiling and deploying the smart contract, we initialize ganache by running `genPrvKey.sh` to get the private keys for the default accounts (the default is 10) and store them in the `.env` file.
-By default, we use the first account `PRIVATE_KEY_1` to deploy the contract.
+1. Generate private keys
 
     ```bash
     bash genPrvKey.sh
-    ganache --mnemonic "dttp"
     ```
 
-    Next time start ganacha, just run as following: 
+2. start ganache
 
     ```bash
     ganache --mnemonic "dttp"
     ```
 
-2. We put the contract file (`.sol`) in the `compile/contract/` folder, in this case `SimpleStorage.sol`.
-
-3. Then we change the Name in `compile.sh` to be the Name of the contract, in this case `Name=SimpleStorage`, and run `compile.sh` to generate `.abi` and `.bin` and `.go` files.
+3. Compile the smart contract code
 
     ```bash
     bash compile.sh
     ```
 
-4. Last, we change the contract_name in `main.go` to be the name of the contract, in this case `contract_name := "SimpleStorage"`. And we run the code as following:
+4. Run the main.go
     ```bash
     go run main.go
     ```
-    Note that each file has detailed comments.
