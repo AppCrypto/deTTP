@@ -1,6 +1,6 @@
 # Example of deployment smart contracts to EVM using GoLang
 
-Here is a simple and convenient golang code utilizes `go-ethereum`,`abigen` and `solc` to deploy the smart contract and intract with the smart contract.
+Here is a simple and convenient golang code utilizes `go-ethereum`,`abigen` and `solc` to deploy the smart contract and intract with the it.
 
 Follow these steps to make it easy to deploy the contracts and intract with smart contracts.
 
