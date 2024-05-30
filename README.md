@@ -6,38 +6,32 @@ Follow these steps to make it easy to deploy the contracts and intract with smar
 
 # Pre requisites
 
-* Ubuntu OS 
-
-  Version: Ubuntu 22.04.4 LTS
+* Ubuntu OS  Version: Ubuntu 22.04.4 LTS
 
 * VS code
 
-* Golang  
-https://go.dev/dl/  
-Version：1.22.0 linux/amd64
+* Golang  https://go.dev/dl/   Version：1.22.0 linux/amd64
 
-* Solidity  
-https://docs.soliditylang.org/en/v0.8.2/installing-solidity.html  
-    Version: 0.8.20
+* Solidity  https://docs.soliditylang.org/en/v0.8.2/installing-solidity.html  Version: 0.8.20
 
-* Solidity compiler (solc).  
-https://docs.soliditylang.org/en/latest/installing-solidity.html 
+* Solidity compiler (solc)  https://docs.soliditylang.org/en/latest/installing-solidity.html  
+Version: 0.8.25-develop
 
-    Version: 0.8.25-develop
+* Ganache-cli     
+Version：v7.9.2 (@ganache/cli: 0.10.2, @ganache/core: 0.10.2)
 
-* Ganache-cli      
     ```bash
     npm install -g ganache  
     ```
-    version：v7.9.2 (@ganache/cli: 0.10.2, @ganache/core: 0.10.2)
-
-* Abigen   
+    
+* Abigen    
+Version: v1.14.3
     ```bash
     go get -u github.com/ethereum/go-ethereum
     cd $GOPATH/src/github.com/ethereum/go-ethereum/
     sudo make && make devtools 
     ```
-    Version: v1.14.3
+    
 
 # Package description
 
