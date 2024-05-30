@@ -50,6 +50,12 @@ Version: 0.8.25-develop
 # How to use it
 
 1. Before compiling and deploying the smart contract, we initialize ganache by running `genPrvKey.sh` to get the private keys for the default accounts (the default is 10) and store them in the `.env` file.
+By default, we use the first account `PRIVATE_KEY_1` to deploy the contract.
+
+    ```bash
+    bash genPrvKey.sh
+    ganache --mnemonic "dttp"
+    ```
 
     Next time start ganacha, just run as following: 
 
