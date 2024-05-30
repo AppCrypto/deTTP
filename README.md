@@ -49,3 +49,24 @@ Version: 0.8.25-develop
 
 # How to use it
 
+1. Before compiling and deploying the smart contract, we initialize ganache by running `genPrvKey.sh` to get the private keys for the default accounts (the default is 10) and store them in the `.env` file.
+
+    Next time start ganacha, just run as following: 
+
+    ```bash
+    ganache --mnemonic "dttp"
+    ```
+
+2. We put the contract file (`.sol`) in the `compile/contract/` folder, in this case `SimpleStorage.sol`.
+
+3. Then we change the Name in `compile.sh` to be the Name of the contract, in this case `Name=SimpleStorage`, and run `compile.sh` to generate `.abi` and `.bin` and `.go` files.
+
+    ```bash
+    bash compile.sh
+    ```
+
+4. Last, we change the contract_name in `main.go` to be the name of the contract, in this case `contract_name := "SimpleStorage"`. And we run the code as following:
+    ```bash
+    go run main.go
+    ```
+    Note that each file has detailed comments.
