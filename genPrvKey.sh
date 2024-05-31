@@ -40,6 +40,6 @@ a=0
 cat ganache_output.txt | grep 'Private Keys' -A 12 | grep -o '0x.*' | while read -r line; do
   echo "PRIVATE_KEY_$((++a))=${line:2}" >> .env
 done
-
+#这个命令在ubuntu系统中存在不会杀死ganache的bug，ganache在ubuntu启动的进程为node，使用之后，需要手动kill杀死占用端口的进程
 rm ganache_output.txt
 ps -ef|grep 'ganache'|xargs kill -9
