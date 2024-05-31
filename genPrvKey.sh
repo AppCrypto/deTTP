@@ -28,9 +28,17 @@ esac
 sleep 5
 rm .env
 
+# 提取可用账户并写入到 .env 文件
+i=1
+cat ganache_output.txt | grep -A 12 'Available Accounts' | grep '0x' | while read -r line; do
+  address=$(echo $line | awk '{print $2}')
+  echo "ACCOUNT_$i=$address" >> .env
+  ((i++))
+done
+a=0
 # 读取私钥并写入到 .env 文件，去掉 '0x' 前缀
 cat ganache_output.txt | grep 'Private Keys' -A 12 | grep -o '0x.*' | while read -r line; do
-  echo "PRIVATE_KEY_$((++i))=${line:2}" >> .env
+  echo "PRIVATE_KEY_$((++a))=${line:2}" >> .env
 done
 
 rm ganache_output.txt
