@@ -219,7 +219,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	//TODO:没有返回值
+
 	fmt.Printf("Upload the DLEQ proofs(prfs_s) Gas used: %d\n", receipt9.GasUsed)
 
 	//Data owner generates a set of DLEQProof prfs'_s and publishes the prfs'_s on the blockchain
