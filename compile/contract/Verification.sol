@@ -609,6 +609,28 @@ contract Verification
 	return true;
     }
 
+    function DELQVerify(uint256[2] memory G,uint256[2] memory XG,uint256[2] memory H,uint256[2] memory XH,uint256 c,uint256[2] memory RG,uint256[2] memory RH,uint256 z) public payable 
+    {
+        G1Point memory _g = G1Point(G[0], G[1]);
+        G1Point memory _h = G1Point(H[0], H[1]);
+        G1Point memory _y1 = G1Point(XG[0], XG[1]);
+        G1Point memory _y2 = G1Point(XH[0], XH[1]);
+		G1Point memory _a1 = G1Point(RG[0], RG[1]);
+        G1Point memory _a2 = G1Point(RH[0], RH[1]);
+ 
+		G1Point memory gG=g1mul(_g,z);
+        G1Point memory y1G=g1mul(_y1,c);
+             
+       	G1Point memory hG=g1mul(_h,z);
+        G1Point memory y2G=g1mul(_y2,c);
+             
+        if((_a1.X!=g1add(gG,y1G).X)||(_a1.Y!=g1add(gG,y1G).Y)||(_a2.X!=g1add(hG,y2G).X)||(_a2.Y!=g1add(hG,y2G).Y))
+        {
+			VerificationResult.push(false);
+        }
+		VerificationResult.push(true);
+   }
+
    struct Ciphertext{
 	G1Point C0;
 	G1Point C1;
