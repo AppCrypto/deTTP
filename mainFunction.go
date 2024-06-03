@@ -82,16 +82,14 @@ func main() {
 	}
 
 	// the number of key shares
-	numShares := 5
+	numShares := 100
 	// threshold value
-	threshold := 3
+	threshold := 51
 
 	//------------------------------------------Registration-------------------------------------//
 	//TODO(Figure 6)： test the gas comsuption of uploading TTPs' PKs with the number challenge of TTPs
 	//Data owner's key pair (sko,pko) and the public key pko is published on the blockchain
 	sko, pko := Threshold_ElGamal.THEGSetup()
-	fmt.Printf("sku为：%v\n", sko)
-	fmt.Printf("pku为：%v\n", pko)
 	//TTPs' key pairs (SKs, PKs) and these public keys PKs are published on the blockchain
 	SKs := make([]*big.Int, numShares)  //the set of TTPs' private key
 	PKs := make([]*bn256.G1, numShares) //the set of TTPs' public key
@@ -111,8 +109,6 @@ func main() {
 	fmt.Printf("upload TTP 's pk Gas used: %d\n", receipt2.GasUsed)
 	//Data user's key pair and the public key is published on the blockchain
 	sku, pku := ElGamal.EGSetup()
-	fmt.Printf("sku为：%v\n", sku)
-	fmt.Printf("pku为：%v\n", pku)
 	//---------------------------------------Secret-Hiding-----------------------------------------//
 	//Randomly generate a plaintext m
 	m, _ := rand.Int(rand.Reader, order)
@@ -129,8 +125,6 @@ func main() {
 	fmt.Printf("upload Ciphertext C Gas used: %d\n", receipt3.GasUsed)
 	//Generate the PVSS shares Key of sko, the share commitment Commitments and {g^si} and publish Commitments and {g^si} on the blockchain
 	VSS_SK, Key := Threshold_ElGamal.THEGKenGen(C, sko, numShares, threshold)
-	//fmt.Printf("The Gs is %v\n", VSS_SK.Gs)
-	//fmt.Printf("The commitments is %v\n", VSS_SK.Commitments)
 	Gs := make([][2]*big.Int, numShares)
 	Commitments := make([][2]*big.Int, threshold)
 	for i := 0; i < numShares; i++ {
@@ -151,7 +145,7 @@ func main() {
 	for i := 0; i < numShares; i++ {
 		CKeys[i] = new(bn256.G1).Add(Key[i], new(bn256.G1).ScalarMult(PKs[i], VSS_SK.Shares[i]))
 	}
-	fmt.Printf("CKey is %v\n", CKeys)
+	//fmt.Printf("CKey is %v\n", CKeys)
 	ckeys := make([][2]*big.Int, numShares)
 	for i := 0; i < numShares; i++ {
 		ckeys[i] = G1ToBigIntArray(CKeys[i])
@@ -219,7 +213,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-
 	fmt.Printf("Upload the DLEQ proofs(prfs_s) Gas used: %d\n", receipt9.GasUsed)
 
 	//Data owner generates a set of DLEQProof prfs'_s and publishes the prfs'_s on the blockchain
@@ -244,7 +237,6 @@ func main() {
 		rH[i] = mul_RH[i]
 	}
 	_prfs_s := DLEQProofs{C: c, Z: z, XG: xG, XH: xH, RG: rG, RH: rH}
-	fmt.Printf("The DLEQProof(prfs'_s) is %v\n", _prfs_s)
 
 	_Proof_g := make([][2]*big.Int, numShares)
 	_Proof_gx := make([][2]*big.Int, numShares)
@@ -275,7 +267,7 @@ func main() {
 	//--------------------------Key-Verification-----------------------------//
 	//The verification of {g^si}(finish on the blockchain)
 	result := vss.VerifyShare(VSS_SK.Gs, VSS_SK.Commitments)
-	fmt.Printf("The off-chain result of VSS.verify is %v\n", result)
+	fmt.Printf("The off-chain result of VSSVerify is %v\n", result)
 	arr := make([]*big.Int, numShares*3+threshold*3)
 	for i := 0; i < numShares; i++ {
 		arr[i] = big.NewInt(int64(i + 1))
@@ -302,8 +294,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("VSS.Verify Gas used: %d\n", receipt5.GasUsed)
-	fmt.Printf("VSS.Verify Result: %v\n", VSSResult)
+	fmt.Printf("VSSVerify Result: %v\n", VSSResult)
+	fmt.Printf("VSSVerify Gas used: %d\n", receipt5.GasUsed)
 
 	Error := dleq.Mul_Verify(prfs_s.C, prfs_s.Z, mul_G, mul_H, prfs_s.XG, prfs_s.XH, prfs_s.RG, prfs_s.RH)
 	fmt.Printf("The off-chain result of DLEQVrf(prfs_s) is %v\n", Error)
@@ -314,8 +306,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("DLEQVerify Gas used: %d\n", receipt6.GasUsed)
-	fmt.Printf("DLEQ verification result is %v\n", DLEQResult)
+	fmt.Printf("DLEQVrf Gas used: %d\n", receipt6.GasUsed)
+	fmt.Printf("DLEQVrf result is %v\n", DLEQResult)
 
 	//-------------------------------Key-Delegation-------------------------------------//
 	//TTPs' use their private keys SKs to decrypt CKey to TTPs_Key
@@ -325,7 +317,7 @@ func main() {
 	}
 	//TTPs use the public key pku to encrypts TTPs_Key to EKey and the EKey is published on the blockchain
 	EKeys := ElGamal.EGEncrypt(TTPs_Key, pku, numShares)
-	fmt.Printf("The key encrypted by TTPs is %v\n", EKeys)
+	//fmt.Printf("The key encrypted by TTPs is %v\n", EKeys)
 	ekeys0 := make([][2]*big.Int, numShares)
 	ekeys1 := make([][2]*big.Int, numShares)
 	for i := 0; i < numShares; i++ {
