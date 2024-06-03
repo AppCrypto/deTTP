@@ -548,7 +548,7 @@ contract Verification
 	}
 
 	
-	//The algotithm VerifyShare
+    //The algotithm VerifyShare
     function VSSVerify(uint256[] memory arr, uint256 len1, uint256 len2)
 	public payable
 	returns (bool)
@@ -562,9 +562,11 @@ contract Verification
 		xG = g1add(xG, g1mul(comj, ipowj)) ;
 	    }
 	    if(arr[len1+i] != xG.X || arr[len1+i+1]!= xG.Y){
+		VerificationResult.push(false);
 		return false;
 	    }
 	}
+	VerificationResult.push(true);
 	return true;
     }
 
@@ -599,9 +601,11 @@ contract Verification
             G1Point memory hG=g1mul(h[i],z[i]);
             G1Point memory y2G=g1mul(y2[i],c[i]); 
             if((a1[i].X!=g1add(gG,y1G).X)||(a1[i].Y!=g1add(gG,y1G).Y)||(a2[i].X!=g1add(hG,y2G).X)||(a2[i].Y!=g1add(hG,y2G).Y)){
-            	return false;
+            	VerificationResult.push(true);
+		return false;
             }
 	}
+	VerificationResult.push(true);
 	return true;
     }
 
@@ -719,5 +723,10 @@ contract Verification
 	ekeys.EK0=ekeys0;
 	ekeys.EK1=ekeys1;
 	EKeys.push(ekeys);
+    }
+
+    bool[] VerificationResult;
+    function get() public view returns (bool[] memory) {
+        return VerificationResult;
     }
 }
