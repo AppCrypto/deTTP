@@ -1,3 +1,3 @@
-compile/contract/SimpleStorage.abi
-compile/contract/SimpleStorage.bin
+compile/contract/*.abi
+compile/contract/*.bin
 compile/contract/SimpleStorage.go
