@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 // https://www.iacr.org/cryptodb/archive/2002/ASIACRYPT/50/50.pdf
 contract Verification
 {
-  	//存储TTP信息
+  	//Storing TTP information
     struct TTP {
         int256 CV_i;      //credit value
         int256 EV_i;      //expected valu
@@ -44,20 +44,18 @@ contract Verification
     int public b=3;
 
 
-    // A mapping to store the ether balance of each user
+    // A mapping to store the ether balance of each task
     mapping(uint => mapping(uint => uint)) public balances;
 
 		function new_task(address date_owner, address date_user, uint date_fee, uint256 n) public   returns (uint)
     {
-         // 初始化一个新的 Task 对象
+         // Initializes a new Task object
         task memory newTask;
         newTask.tasktime = block.timestamp;
         newTask.date_owner = date_owner;
         newTask.date_user = date_user;
         newTask.date_fee = date_fee;
         newTask.n = n;
-
-        // 初始化其他字段，使用默认值或空值
         newTask.TTPS = new address[](0);
         newTask.sendersdata = new uint[](0);
         newTask.senderss = new uint[](0);
@@ -105,7 +103,7 @@ contract Verification
         tasks[task_id].sendersa.push(TTP_id);
     }	
 
-    //date_user pay
+    //date_user fee
     function date_user_fee(uint task_id) public returns (uint256) { 
        uint256 ALL_fees=0;
        for (uint i = 0; i < tasks[task_id].sendersa.length; i++) {
@@ -144,7 +142,7 @@ contract Verification
                 count++;
             }
         }		
-		//给验证失败的TTP发钱+质押后不提供数据的退钱
+	
         for (uint i = 0; i < temp.length; i++) {
 			TTP memory ttp = TTPS[temp[i]];
             address payable recipient1 = payable(ttp.account);
@@ -157,8 +155,7 @@ contract Verification
             ALL += balances[temp[i]][task_id];
         }
         uint share = ALL  / success.length;
-
-		//给验证成功的TTP发钱     
+ 
         for (uint i = 0; i < success.length; i++) {
 			TTP memory ttp = TTPS[success[i]];
             address payable recipient2 = payable(ttp.account);
@@ -192,7 +189,6 @@ contract Verification
                 count++;
             }
         }		
-		//给验证失败的TTP发钱+质押后不提供数据的退钱
         for (uint i = 0; i < temp.length; i++) {
 			TTP memory ttp = TTPS[temp[i]];
             address payable recipient1 = payable(ttp.account);
@@ -205,8 +201,7 @@ contract Verification
             ALL += balances[temp[i]][task_id];
         }
         uint share = ALL  / (success.length+1);
-
-		//给验证成功的TTP发钱     
+    
         for (uint i = 0; i < success.length; i++) {
 			TTP memory ttp = TTPS[success[i]];
             address payable recipient2 = payable(ttp.account);
