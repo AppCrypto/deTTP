@@ -34,7 +34,7 @@ contract Verification
     }
 
 
-    TTP[] TTPS;
+   TTP[] TTPS;
     task[] tasks;
 
     
@@ -44,22 +44,24 @@ contract Verification
     int public b=3;
 
 
-    // A mapping to store the ether balance of each task
+    // A mapping to store the ether balance of each user
     mapping(uint => mapping(uint => uint)) public balances;
+    mapping(uint => uint[]) public task_success;
+    mapping(uint => uint[]) public task_failed;
 
 		function new_task(address date_owner, address date_user, uint date_fee, uint256 n) public   returns (uint)
     {
-         // Initializes a new Task object
+
         task memory newTask;
         newTask.tasktime = block.timestamp;
         newTask.date_owner = date_owner;
         newTask.date_user = date_user;
         newTask.date_fee = date_fee;
         newTask.n = n;
+
+
         newTask.TTPS = new address[](0);
         newTask.sendersdata = new uint[](0);
-        newTask.senderss = new uint[](0);
-        newTask.sendersf = new uint[](0);
         newTask.sendersa = new uint[](0);
         newTask.success_distribute1 = 0;
         newTask.fail_distribute1 = 0;
@@ -103,7 +105,7 @@ contract Verification
         tasks[task_id].sendersa.push(TTP_id);
     }	
 
-    //date_user fee
+    //date_user pay
     function date_user_fee(uint task_id) public returns (uint256) { 
        uint256 ALL_fees=0;
        for (uint i = 0; i < tasks[task_id].sendersa.length; i++) {
@@ -121,41 +123,33 @@ contract Verification
       //date_user pay
     function date_user_pay(uint task_id) public payable {
        require(tasks[task_id].ALL_fee == msg.value, "The amount you sent is wrong");
-    }	  
+    }	 
+
+    function  Submit_verification_results(uint task_id,uint[] memory success,uint[] memory failed) public{
+        task_success[task_id] = success;
+        task_failed[task_id] = failed;
+    }
 
     //Allocation of Funds for Successful Mission Execution
-    function success_distribute(uint task_id,uint[] memory success) public  {
-        require(block.timestamp <= tasks[task_id].tasktime +  2 minutes, "Not enough time passed");
-        require(success.length >= tasks[task_id].n, "The number of ttp has not reached the threshold");  
-        uint[] memory temp = new uint[](tasks[task_id].sendersa.length-success.length);
-		uint count = 0;
-		for (uint i = 0; i < tasks[task_id].sendersa.length; i++) {
-            bool found = false;
-            for (uint j = 0; j < success.length; j++) {
-                if (tasks[task_id].sendersa[i] == success[j]) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-				temp[count] = tasks[task_id].sendersa[i];
-                count++;
-            }
-        }		
-	
-        for (uint i = 0; i < temp.length; i++) {
-			TTP memory ttp = TTPS[temp[i]];
+    function success_distribute(uint task_id) public  {
+        require(block.timestamp <= tasks[task_id].tasktime +  2 minutes, "Not enough time passed");  
+        uint[] memory success = task_success[task_id];
+        uint[] memory failed = task_failed[task_id];
+        require(success.length >= tasks[task_id].n, "The number of ttp has not reached the threshold");
+
+        for (uint i = 0; i < failed.length; i++) {
+			TTP memory ttp = TTPS[failed[i]];
             address payable recipient1 = payable(ttp.account);
-            uint refund = balances[temp[i]][task_id] * uint(ttp.RP_i) / 100;
+            uint refund = balances[failed[i]][task_id] * uint(ttp.RP_i) / 100;
             recipient1.transfer(refund);
-            balances[temp[i]][task_id] -= refund;
+            balances[failed[i]][task_id] -= refund;
         }
         uint ALL=0;
-        for (uint i = 0; i < temp.length; i++) { 
-            ALL += balances[temp[i]][task_id];
+        for (uint i = 0; i < failed.length; i++) { 
+            ALL += balances[failed[i]][task_id];
         }
         uint share = ALL  / success.length;
- 
+   
         for (uint i = 0; i < success.length; i++) {
 			TTP memory ttp = TTPS[success[i]];
             address payable recipient2 = payable(ttp.account);
@@ -170,38 +164,25 @@ contract Verification
     }
 
     //Allocation of Funds for Failed Task Executions
-    function fail_distribute(uint task_id,uint[] memory success) public {
+    function fail_distribute(uint task_id) public {
         //require(block.timestamp >= tasks[task_id].tasktime +  2 minutes, "Not enough time passed");
+        uint[] memory success = task_success[task_id];
+        uint[] memory failed = task_failed[task_id];
         require(success.length < tasks[task_id].n, "Record is already completed");
-		tasks[task_id].fail_distribute1 == 1;
-        uint[] memory temp = new uint[](tasks[task_id].sendersa.length-success.length);
-		uint count = 0;
-		for (uint i = 0; i < tasks[task_id].sendersa.length; i++) {
-            bool found = false;
-            for (uint j = 0; j < success.length; j++) {
-                if (tasks[task_id].sendersa[i] == success[j]) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-				temp[count] = tasks[task_id].sendersa[i];
-                count++;
-            }
-        }		
-        for (uint i = 0; i < temp.length; i++) {
-			TTP memory ttp = TTPS[temp[i]];
+        for (uint i = 0; i < failed.length; i++) {
+			TTP memory ttp = TTPS[failed[i]];
             address payable recipient1 = payable(ttp.account);
-            uint refund = balances[temp[i]][task_id] * uint(ttp.RP_i) / 100;
+            uint refund = balances[failed[i]][task_id] * uint(ttp.RP_i) / 100;
             recipient1.transfer(refund);
-            balances[temp[i]][task_id] -= refund;
+            balances[failed[i]][task_id] -= refund;
         }
         uint ALL=0;
-        for (uint i = 0; i < temp.length; i++) { 
-            ALL += balances[temp[i]][task_id];
+        for (uint i = 0; i < failed.length; i++) { 
+            ALL += balances[failed[i]][task_id];
         }
         uint share = ALL  / (success.length+1);
-    
+
+		//给验证成功的TTP发钱     
         for (uint i = 0; i < success.length; i++) {
 			TTP memory ttp = TTPS[success[i]];
             address payable recipient2 = payable(ttp.account);
@@ -215,36 +196,23 @@ contract Verification
     }
 
     //Function to update CV_i
-    function updateCY_i(uint task_id,uint[] memory success) public  {
-        uint[] memory temp = new uint[](tasks[task_id].sendersa.length-success.length);
-		uint count = 0;
-		for (uint i = 0; i < tasks[task_id].sendersa.length; i++) {
-            bool found = false;
-            for (uint j = 0; j < success.length; j++) {
-                if (tasks[task_id].sendersa[i] == success[j]) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-				temp[count] = tasks[task_id].sendersa[i];
-                count++;
-            }
-        }		
+    function updateCY_i(uint task_id) public  {
+        uint[] memory success = task_success[task_id];
+        uint[] memory failed = task_failed[task_id];		
         if (tasks[task_id].success_distribute1 == 1 ) {
             for (uint i = 0; i < success.length; i++) {
                 TTPS[success[i]].CV_i += 5;
             }
-            for (uint i = 0; i < temp.length; i++) {
-                TTPS[temp[i]].CV_i -= 5;
+            for (uint i = 0; i < failed.length; i++) {
+                TTPS[failed[i]].CV_i -= 2;
             }
         }
         else if (tasks[task_id].fail_distribute1 == 1) {
             for (uint i = 0; i < success.length; i++) {
-                TTPS[success[i]].CV_i += 10;
+                TTPS[success[i]].CV_i += 5;
             }
-            for (uint i = 0; i < temp.length; i++) {
-                TTPS[temp[i]].CV_i -= 10;
+            for (uint i = 0; i < failed.length; i++) {
+                TTPS[failed[i]].CV_i -= 5;
             }
         }
     }
