@@ -15,7 +15,7 @@ import (
 
 func main() {
 	//Number of ttp nodes (begin 0 )
-	n := 10
+	n := 100
 
 	contract_name := "Verification"
 
@@ -44,7 +44,7 @@ func main() {
 	//Create a successful settlement task
 	Contract.NewTask(auth2, owner_Address, user_Address, big.NewInt(1000000000000000000), big.NewInt(int64(n)))
 	//TTP Registration
-	for i := 0; i < n; i++ {
+	for i := 0; i < n-1; i++ {
 
 		auth3 := utils.Transact(client, privatekey1, big.NewInt(0))
 
@@ -64,6 +64,15 @@ func main() {
 		}
 		fmt.Printf("TTP%d registration and calculation of EDAI Gas used: %d\n", i, receipt1.GasUsed)
 	}
+	fauth3 := utils.Transact(client, privatekey1, big.NewInt(0))
+
+	var (
+		CV_i = big.NewInt(100000000000000000)
+		EV_i = big.NewInt(1000000000000000000)
+		RP_i = big.NewInt(20)
+	)
+
+	Contract.TTPRegister(fauth3, CV_i, EV_i, RP_i, fTTP_Address)
 
 	for i := 0; i < n; i++ {
 		//Query TTP deposited funds
@@ -72,6 +81,7 @@ func main() {
 		privatekey4 := utils.GetENV("PRIVATE_KEY_4")
 
 		auth4 := utils.Transact(client, privatekey4, EDA_i)
+
 		//Deposit money
 		tx2, err := Contract.Deposit(auth4, big.NewInt(int64(i)), big.NewInt(0))
 		if err != nil {
@@ -110,10 +120,17 @@ func main() {
 	for i := 0; i < n; i++ {
 		success[i] = big.NewInt(int64(i))
 	}
-
 	auth7 := utils.Transact(client, privatekey1, big.NewInt(0))
+
+	failed := []*big.Int{}
+	_, err = Contract.SubmitVerificationResults(auth7, big.NewInt(0), success, failed)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	auth8 := utils.Transact(client, privatekey1, big.NewInt(0))
 	//Calling a successful task
-	tx3, err := Contract.SuccessDistribute(auth7, big.NewInt(0), success)
+	tx3, err := Contract.SuccessDistribute(auth8, big.NewInt(0))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -124,9 +141,9 @@ func main() {
 
 	fmt.Printf("successful task Gas used: %d\n", receipt3.GasUsed)
 
-	auth8 := utils.Transact(client, privatekey1, big.NewInt(0))
+	auth9 := utils.Transact(client, privatekey1, big.NewInt(0))
 	//update cv_i
-	tx4, err := Contract.UpdateCYI(auth8, big.NewInt(0), success)
+	tx4, err := Contract.UpdateCYI(auth9, big.NewInt(0))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -159,16 +176,17 @@ func main() {
 
 	fmt.Printf("TTP_Address %s balance: %d Wei\n", TTP_Address.Hex(), balance3)
 	//--------------------------------Failed task
-	auth22 := utils.Transact(client, privatekey1, big.NewInt(0))
-	Contract.NewTask(auth22, owner_Address, user_Address, big.NewInt(1000000000000000000), big.NewInt(int64(n)))
+	auth10 := utils.Transact(client, privatekey1, big.NewInt(0))
+
+	Contract.NewTask(auth10, owner_Address, user_Address, big.NewInt(1000000000000000000), big.NewInt(int64(n)))
 	for i := 0; i < (n - 1); i++ {
 		//Query TTP deposited funds
 		_, _, _, EDA_i, _, _ := Contract.QueryTTP(&bind.CallOpts{}, big.NewInt(int64(i)))
 
 		privatekey4 := utils.GetENV("PRIVATE_KEY_4")
 		//Deposit money
-		auth9 := utils.Transact(client, privatekey4, EDA_i)
-		tx2, err := Contract.Deposit(auth9, big.NewInt(int64(i)), big.NewInt(1))
+		auth11 := utils.Transact(client, privatekey4, EDA_i)
+		tx2, err := Contract.Deposit(auth11, big.NewInt(int64(i)), big.NewInt(1))
 		if err != nil {
 			fmt.Println(err)
 		}
@@ -186,16 +204,16 @@ func main() {
 
 	fprivatekey4 := utils.GetENV("PRIVATE_KEY_5")
 
-	fauth4 := utils.Transact(client, fprivatekey4, fEDA_i)
+	auth12 := utils.Transact(client, fprivatekey4, fEDA_i)
 
-	_, err = Contract.Deposit(fauth4, big.NewInt(int64(n-1)), big.NewInt(1))
+	_, err = Contract.Deposit(auth12, big.NewInt(int64(n-1)), big.NewInt(1))
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	auth10 := utils.Transact(client, privatekey1, big.NewInt(0))
+	auth13 := utils.Transact(client, privatekey1, big.NewInt(0))
 	//Calculate the amount of money data_user needs to pay
-	_, err = Contract.DateUserFee(auth10, big.NewInt(1))
+	_, err = Contract.DateUserFee(auth13, big.NewInt(1))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -208,9 +226,9 @@ func main() {
 
 	privatekey3 = utils.GetENV("PRIVATE_KEY_3")
 
-	auth11 := utils.Transact(client, privatekey3, DateUserFee)
+	auth14 := utils.Transact(client, privatekey3, DateUserFee)
 	//data_user pays
-	_, err = Contract.DateUserPay(auth11, big.NewInt(1))
+	_, err = Contract.DateUserPay(auth14, big.NewInt(1))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -221,9 +239,17 @@ func main() {
 		success1[i] = big.NewInt(int64(i))
 	}
 
-	auth12 := utils.Transact(client, privatekey1, big.NewInt(0))
+	auth15 := utils.Transact(client, privatekey1, big.NewInt(0))
+
+	failed2 := []*big.Int{big.NewInt(int64(n - 1))}
+	_, err = Contract.SubmitVerificationResults(auth15, big.NewInt(1), success1, failed2)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	auth16 := utils.Transact(client, privatekey1, big.NewInt(0))
 	//Calling a failed task
-	tx6, err := Contract.FailDistribute(auth12, big.NewInt(1), success1)
+	tx6, err := Contract.FailDistribute(auth16, big.NewInt(1))
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -233,9 +259,9 @@ func main() {
 	}
 
 	fmt.Printf("failed task Gas used: %d\n", receipt6.GasUsed)
-	auth13 := utils.Transact(client, privatekey1, big.NewInt(0))
+	auth17 := utils.Transact(client, privatekey1, big.NewInt(0))
 	//update cv_i
-	_, err = Contract.UpdateCYI(auth13, big.NewInt(1), success)
+	_, err = Contract.UpdateCYI(auth17, big.NewInt(1))
 	if err != nil {
 		fmt.Println(err)
 	}
