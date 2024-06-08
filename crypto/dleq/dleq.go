@@ -11,14 +11,11 @@ import (
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/google"
 )
 
-func NewDLEQProof(G, H *bn256.G1, x *big.Int) (c, z *big.Int, xG, xH, rG, rH *bn256.G1, err error) {
-	//加密x
-	xG = new(bn256.G1).ScalarMult(G, x)
-	xH = new(bn256.G1).ScalarMult(H, x)
+func NewDLEQProof(G, H *bn256.G1, xG, xH *bn256.G1, x *big.Int) (c, z *big.Int, rG, rH *bn256.G1, err error) {
 	//生成承诺
 	r, err := rand.Int(rand.Reader, bn256.Order)
 	if err != nil {
-		return nil, nil, nil, nil, nil, nil, err
+		return nil, nil, nil, nil, err
 	}
 	rG = new(bn256.G1).ScalarMult(G, r)
 	rH = new(bn256.G1).ScalarMult(H, r)
@@ -39,7 +36,7 @@ func NewDLEQProof(G, H *bn256.G1, x *big.Int) (c, z *big.Int, xG, xH, rG, rH *bn
 	z.Sub(r, z)
 	z.Mod(z, bn256.Order)
 
-	return c, z, xG, xH, rG, rH, nil
+	return c, z, rG, rH, nil
 }
 
 // Verify verifies the DLEQ proof
@@ -56,7 +53,7 @@ func Verify(c, z *big.Int, G, H, xG, xH, rG, rH *bn256.G1) error {
 	return nil
 }
 
-func Mul_NewDLEQProof(G, H []*bn256.G1, x []*big.Int) (C, Z []*big.Int, XG, XH, RG, RH []*bn256.G1, err error) {
+func Mul_NewDLEQProof(G, H, xG, xH []*bn256.G1, x []*big.Int) (C, Z []*big.Int, XG, XH, RG, RH []*bn256.G1, err error) {
 	k := len(G)
 	C = make([]*big.Int, k)
 	Z = make([]*big.Int, k)
@@ -67,13 +64,13 @@ func Mul_NewDLEQProof(G, H []*bn256.G1, x []*big.Int) (C, Z []*big.Int, XG, XH, 
 	var errors []string
 
 	for i := 0; i < k; i++ {
-		c, z, xg, xh, rg, rh, err := NewDLEQProof(G[i], H[i], x[i])
+		c, z, rg, rh, err := NewDLEQProof(G[i], H[i], xG[i], xH[i], x[i])
 		if err != nil {
 			errorMsg := fmt.Sprintf("第%d个proof生成错误: %v", i, err)
 			errors = append(errors, errorMsg)
 			continue // Optionally skip this index and continue or you can store placeholders
 		}
-		C[i], Z[i], XG[i], XH[i], RG[i], RH[i] = c, z, xg, xh, rg, rh
+		C[i], Z[i], XG[i], XH[i], RG[i], RH[i] = c, z, xG[i], xH[i], rg, rh
 	}
 
 	if len(errors) > 0 {

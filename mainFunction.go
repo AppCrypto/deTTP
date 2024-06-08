@@ -164,14 +164,19 @@ func main() {
 
 	mul_G := make([]*bn256.G1, numShares)
 	mul_H := make([]*bn256.G1, numShares)
+	mul_XG := make([]*bn256.G1, numShares)
+	mul_XH := make([]*bn256.G1, numShares)
 	mul_X := make([]*big.Int, numShares)
 
 	for i := 0; i < numShares; i++ {
 		mul_G[i] = g
 		mul_H[i] = new(bn256.G1).Add(C.C0, PKs[i])
+		mul_XG[i] = new(bn256.G1).ScalarMult(mul_G[i], VSS_SK.Shares[i])
+		mul_XH[i] = new(bn256.G1).ScalarMult(mul_H[i], VSS_SK.Shares[i])
 		mul_X[i] = VSS_SK.Shares[i]
 	}
-	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ := dleq.Mul_NewDLEQProof(mul_G, mul_H, mul_X)
+
+	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ := dleq.Mul_NewDLEQProof(mul_G, mul_H, mul_XG, mul_XH, mul_X)
 
 	c := make([]*big.Int, numShares)
 	z := make([]*big.Int, numShares)
@@ -219,8 +224,11 @@ func main() {
 	_mul_H := make([]*bn256.G1, numShares)
 	for i := 0; i < numShares; i++ {
 		_mul_H[i] = C.C0
+		mul_XG[i] = new(bn256.G1).ScalarMult(mul_G[i], mul_X[i])
+		mul_XH[i] = new(bn256.G1).ScalarMult(mul_H[i], mul_X[i])
+
 	}
-	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ = dleq.Mul_NewDLEQProof(mul_G, _mul_H, mul_X)
+	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ = dleq.Mul_NewDLEQProof(mul_G, _mul_H, mul_XG, mul_XH, mul_X)
 
 	c = make([]*big.Int, numShares)
 	z = make([]*big.Int, numShares)
@@ -358,8 +366,11 @@ func main() {
 	numDispute := 1 //the number of dispute
 	DIS := make([]*bn256.G1, numDispute)
 	DIS[0] = new(bn256.G1).ScalarMult(EKeys.EK0[0], sku)
+	_xG := new(bn256.G1).ScalarMult(g, sku)
+	_xH := new(bn256.G1).ScalarMult(EKeys.EK0[0], sku)
 	//Data user generates the DLEQProof of sku prfs_sku and publishes the prfs_sku on the blockchain
-	_c, _z, _xG, _xH, _rG, _rH, _ := dleq.NewDLEQProof(g, EKeys.EK0[0], sku)
+	_c, _z, _rG, _rH, _ := dleq.NewDLEQProof(g, EKeys.EK0[0], _xG, _xH, sku)
+
 	prfs_sku := DLEQProof{C: _c, Z: _z, XG: _xG, XH: _xH, RG: _rG, RH: _rH}
 	Dis_proof_g := make([][2]*big.Int, 1)
 	Dis_proof_gx := make([][2]*big.Int, 1)
