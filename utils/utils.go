@@ -57,7 +57,7 @@ func Transact(client *ethclient.Client, privatekey string, value *big.Int) *bind
 		log.Fatalf("Failed to get nonce: %v", err)
 	}
 
-	gasLimit := uint64(3000000)
+	gasLimit := uint64(90071992547)
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
 		log.Fatalf("Failed to get gas price: %v", err)
