@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -43,6 +44,21 @@ type DLEQProof struct {
 type EK struct {
 	EK0 []*bn256.G1
 	EK1 []*bn256.G1
+}
+
+func G1ToG1Point(bn256Point *bn256.G1) contract.VerificationG1Point {
+	// Marshal the G1 point to get the X and Y coordinates as bytes
+	point := bn256Point.Marshal()
+
+	// Create big.Int for X and Y coordinates
+	x := new(big.Int).SetBytes(point[:32])
+	y := new(big.Int).SetBytes(point[32:64])
+
+	g1Point := contract.VerificationG1Point{
+		X: x,
+		Y: y,
+	}
+	return g1Point
 }
 
 func G1ToBigIntArray(point *bn256.G1) [2]*big.Int {
@@ -82,56 +98,79 @@ func main() {
 	}
 
 	// the number of key shares
-	numShares := 100
+	numShares := 10
 	// threshold value
-	threshold := 51
+	threshold := numShares/2 + 1
+	//threshold := 2*numShares/3 + 1
+
+	var n int64 = 100
+
+	fmt.Printf("The number of shares is %v\n", numShares)
+	fmt.Printf("The threshold value is %v\n", threshold)
+	var g1Point contract.VerificationG1Point
 
 	//------------------------------------------Registration-------------------------------------//
-	//TODO(Figure 6)： test the gas comsuption of uploading TTPs' PKs with the number challenge of TTPs
 	//Data owner's key pair (sko,pko) and the public key pko is published on the blockchain
 	sko, pko := Threshold_ElGamal.THEGSetup()
 	//TTPs' key pairs (SKs, PKs) and these public keys PKs are published on the blockchain
 	SKs := make([]*big.Int, numShares)  //the set of TTPs' private key
 	PKs := make([]*bn256.G1, numShares) //the set of TTPs' public key
-	TTPs_PKs := make([][2]*big.Int, numShares)
+	var TTPs_PKs []contract.VerificationG1Point
+
 	for i := 0; i < numShares; i++ {
 		sk, pk, _ := bn256.RandomG1(rand.Reader)
 		SKs[i] = sk
 		PKs[i] = pk
-		TTPs_PKs[i] = G1ToBigIntArray(pk)
+
+		g1Point = G1ToG1Point(pk)
+		TTPs_PKs = append(TTPs_PKs, g1Point)
+
 	}
+	//TODO(Figure 6)： Test the gas comsuption of uploading TTPs' PKs with the number challenge of TTPs
 	auth2 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx2, _ := Contract.UploadMultipleTTPPk(auth2, TTPs_PKs)
+	tx2, _ := Contract.UploadMultiplePKs(auth2, TTPs_PKs)
 	receipt2, err := bind.WaitMined(context.Background(), client, tx2)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("upload TTP 's pk Gas used: %d\n", receipt2.GasUsed)
+	fmt.Printf("Figure 6: Upload TTP 's pk Gas used: %d\n", receipt2.GasUsed)
 	//Data user's key pair and the public key is published on the blockchain
+
 	sku, pku := ElGamal.EGSetup()
 	//---------------------------------------Secret-Hiding-----------------------------------------//
-	//Randomly generate a plaintext m
+	// //Randomly generate a plaintext m
 	m, _ := rand.Int(rand.Reader, order)
 	//Data owner encrypts the plaintext to ciphertext C and C is published on the blockchain
 	C := Threshold_ElGamal.THEGEncrypt(m, pko)
 	fmt.Printf("The ciphertext C is %s\n", C)
 
 	auth3 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx3, _ := Contract.UploadCiphertext(auth3, G1ToBigIntArray(C.C0), G1ToBigIntArray(C.C1))
+	tx3, _ := Contract.UploadCiphertext(auth3, G1ToG1Point(C.C0), G1ToG1Point(C.C1))
 	receipt3, err := bind.WaitMined(context.Background(), client, tx3)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
 	fmt.Printf("upload Ciphertext C Gas used: %d\n", receipt3.GasUsed)
 	//Generate the PVSS shares Key of sko, the share commitment Commitments and {g^si} and publish Commitments and {g^si} on the blockchain
-	VSS_SK, Key := Threshold_ElGamal.THEGKenGen(C, sko, numShares, threshold)
-	Gs := make([][2]*big.Int, numShares)
-	Commitments := make([][2]*big.Int, threshold)
+	//TODO(Figure 4):test the time cost of THEGKenGen algorithm with the change of TTPs' number
+	var VSS_SK *vss.SecretSharing
+	var Key []*bn256.G1
+	starttime := time.Now().UnixMilli()
+	for i := 0; i < int(n); i++ {
+		VSS_SK, Key = Threshold_ElGamal.THEGKenGen(C, sko, numShares, threshold)
+	}
+	endtime := time.Now().UnixMilli()
+	fmt.Printf("Figure 4: the time cost of THEGKenGen is %v ms\n", (endtime-starttime)/n)
+
+	var Gs []contract.VerificationG1Point
+	var Commitments []contract.VerificationG1Point
 	for i := 0; i < numShares; i++ {
-		Gs[i] = G1ToBigIntArray(VSS_SK.Gs[i])
+		g1Point = G1ToG1Point(VSS_SK.Gs[i])
+		Gs = append(Gs, g1Point)
 	}
 	for i := 0; i < threshold; i++ {
-		Commitments[i] = G1ToBigIntArray(VSS_SK.Commitments[i])
+		g1Point = G1ToG1Point(VSS_SK.Commitments[i])
+		Commitments = append(Commitments, g1Point)
 	}
 	auth4 := utils.Transact(client, privatekey, big.NewInt(0))
 	tx4, _ := Contract.GsAndCommitment(auth4, Gs, Commitments)
@@ -146,9 +185,10 @@ func main() {
 		CKeys[i] = new(bn256.G1).Add(Key[i], new(bn256.G1).ScalarMult(PKs[i], VSS_SK.Shares[i]))
 	}
 	//fmt.Printf("CKey is %v\n", CKeys)
-	ckeys := make([][2]*big.Int, numShares)
+	var ckeys []contract.VerificationG1Point
 	for i := 0; i < numShares; i++ {
-		ckeys[i] = G1ToBigIntArray(CKeys[i])
+		g1Point = G1ToG1Point(CKeys[i])
+		ckeys = append(ckeys, g1Point)
 	}
 	auth8 := utils.Transact(client, privatekey, big.NewInt(0))
 	tx8, _ := Contract.UploadCKey(auth8, ckeys)
@@ -171,11 +211,10 @@ func main() {
 	for i := 0; i < numShares; i++ {
 		mul_G[i] = g
 		mul_H[i] = new(bn256.G1).Add(C.C0, PKs[i])
-		mul_XG[i] = new(bn256.G1).ScalarMult(mul_G[i], VSS_SK.Shares[i])
-		mul_XH[i] = new(bn256.G1).ScalarMult(mul_H[i], VSS_SK.Shares[i])
 		mul_X[i] = VSS_SK.Shares[i]
+		mul_XG[i] = new(bn256.G1).ScalarMult(g, mul_X[i])
+		mul_XH[i] = new(bn256.G1).ScalarMult(mul_H[i], mul_X[i])
 	}
-
 	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ := dleq.Mul_NewDLEQProof(mul_G, mul_H, mul_XG, mul_XH, mul_X)
 
 	c := make([]*big.Int, numShares)
@@ -194,21 +233,27 @@ func main() {
 	}
 	prfs_s := DLEQProofs{C: c, Z: z, XG: xG, XH: xH, RG: rG, RH: rH}
 
-	Proof_g := make([][2]*big.Int, numShares)
-	Proof_gx := make([][2]*big.Int, numShares)
-	Proof_h := make([][2]*big.Int, numShares)
-	Proof_hx := make([][2]*big.Int, numShares)
+	var Proof_g []contract.VerificationG1Point
+	var Proof_gx []contract.VerificationG1Point
+	var Proof_h []contract.VerificationG1Point
+	var Proof_hx []contract.VerificationG1Point
 	Proof_c := make([]*big.Int, numShares)
-	Proof_gr := make([][2]*big.Int, numShares)
-	Proof_hr := make([][2]*big.Int, numShares)
+	var Proof_gr []contract.VerificationG1Point
+	var Proof_hr []contract.VerificationG1Point
 	Proof_z := make([]*big.Int, numShares)
 	for i := 0; i < numShares; i++ {
-		Proof_g[i] = G1ToBigIntArray(mul_G[i])
-		Proof_gx[i] = G1ToBigIntArray(prfs_s.XG[i])
-		Proof_h[i] = G1ToBigIntArray(mul_H[i])
-		Proof_hx[i] = G1ToBigIntArray(prfs_s.XH[i])
-		Proof_gr[i] = G1ToBigIntArray(prfs_s.RG[i])
-		Proof_hr[i] = G1ToBigIntArray(prfs_s.RH[i])
+		g1Point = G1ToG1Point(mul_G[i])
+		Proof_g = append(Proof_g, g1Point)
+		g1Point = G1ToG1Point(prfs_s.XG[i])
+		Proof_gx = append(Proof_gx, g1Point)
+		g1Point = G1ToG1Point(mul_H[i])
+		Proof_h = append(Proof_h, g1Point)
+		g1Point = G1ToG1Point(prfs_s.XH[i])
+		Proof_hx = append(Proof_hx, g1Point)
+		g1Point = G1ToG1Point(prfs_s.RG[i])
+		Proof_gr = append(Proof_gr, g1Point)
+		g1Point = G1ToG1Point(prfs_s.RH[i])
+		Proof_hr = append(Proof_hr, g1Point)
 		Proof_c[i] = prfs_s.C[i]
 		Proof_z[i] = prfs_s.Z[i]
 	}
@@ -222,13 +267,12 @@ func main() {
 
 	//Data owner generates a set of DLEQProof prfs'_s and publishes the prfs'_s on the blockchain
 	_mul_H := make([]*bn256.G1, numShares)
+	_mul_XH := make([]*bn256.G1, numShares)
 	for i := 0; i < numShares; i++ {
 		_mul_H[i] = C.C0
-		mul_XG[i] = new(bn256.G1).ScalarMult(mul_G[i], mul_X[i])
-		mul_XH[i] = new(bn256.G1).ScalarMult(mul_H[i], mul_X[i])
-
+		_mul_XH[i] = new(bn256.G1).ScalarMult(_mul_H[i], mul_X[i])
 	}
-	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ = dleq.Mul_NewDLEQProof(mul_G, _mul_H, mul_XG, mul_XH, mul_X)
+	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ = dleq.Mul_NewDLEQProof(mul_G, _mul_H, mul_XG, _mul_XH, mul_X)
 
 	c = make([]*big.Int, numShares)
 	z = make([]*big.Int, numShares)
@@ -246,23 +290,29 @@ func main() {
 	}
 	_prfs_s := DLEQProofs{C: c, Z: z, XG: xG, XH: xH, RG: rG, RH: rH}
 
-	_Proof_g := make([][2]*big.Int, numShares)
-	_Proof_gx := make([][2]*big.Int, numShares)
-	_Proof_h := make([][2]*big.Int, numShares)
-	_Proof_hx := make([][2]*big.Int, numShares)
+	var _Proof_g []contract.VerificationG1Point
+	var _Proof_gx []contract.VerificationG1Point
+	var _Proof_h []contract.VerificationG1Point
+	var _Proof_hx []contract.VerificationG1Point
 	_Proof_c := make([]*big.Int, numShares)
-	_Proof_gr := make([][2]*big.Int, numShares)
-	_Proof_hr := make([][2]*big.Int, numShares)
+	var _Proof_gr []contract.VerificationG1Point
+	var _Proof_hr []contract.VerificationG1Point
 	_Proof_z := make([]*big.Int, numShares)
 	for i := 0; i < numShares; i++ {
-		_Proof_g[i] = G1ToBigIntArray(mul_G[i])
-		_Proof_gx[i] = G1ToBigIntArray(_prfs_s.XG[i])
-		_Proof_h[i] = G1ToBigIntArray(_mul_H[i])
-		_Proof_hx[i] = G1ToBigIntArray(_prfs_s.XH[i])
-		_Proof_gr[i] = G1ToBigIntArray(_prfs_s.RG[i])
-		_Proof_hr[i] = G1ToBigIntArray(_prfs_s.RH[i])
-		_Proof_c[i] = _prfs_s.C[i]
-		_Proof_z[i] = _prfs_s.Z[i]
+		g1Point = G1ToG1Point(mul_G[i])
+		_Proof_g = append(_Proof_g, g1Point)
+		g1Point = G1ToG1Point(prfs_s.XG[i])
+		_Proof_gx = append(_Proof_gx, g1Point)
+		g1Point = G1ToG1Point(mul_H[i])
+		_Proof_h = append(_Proof_h, g1Point)
+		g1Point = G1ToG1Point(prfs_s.XH[i])
+		_Proof_hx = append(_Proof_hx, g1Point)
+		g1Point = G1ToG1Point(prfs_s.RG[i])
+		_Proof_gr = append(_Proof_gr, g1Point)
+		g1Point = G1ToG1Point(prfs_s.RH[i])
+		_Proof_hr = append(_Proof_hr, g1Point)
+		_Proof_c[i] = prfs_s.C[i]
+		_Proof_z[i] = prfs_s.Z[i]
 	}
 	auth10 := utils.Transact(client, privatekey, big.NewInt(0))
 	tx10, _ := Contract.UploadDLEQProof(auth10, _Proof_g, _Proof_gx, _Proof_h, _Proof_hx, _Proof_c, _Proof_gr, _Proof_hr, _Proof_z)
@@ -272,36 +322,247 @@ func main() {
 	}
 	fmt.Printf("Upload the DLEQ proofs(prfs'_s) Gas used: %d\n", receipt10.GasUsed)
 
+	// //---------------------------------------Figure7 Test-------------------------------------------//
+	// //TODO(Figure 7):Test the time cost of Secret-Hiding with the change of TTPs' number(1 THEGEncrypt+1 THEGKeyGen+ 2n DLEQProof)
+	// //Randomly generate a plaintext m
+	// m, _ := rand.Int(rand.Reader, order)
+	// var C *Threshold_ElGamal.C
+	// var VSS_SK *vss.SecretSharing
+	// var Key []*bn256.G1
+	// CKeys := make([]*bn256.G1, numShares)
+
+	// g1 := new(bn256.G1)
+	// g1Scalar := big.NewInt(1)
+	// g := g1.ScalarBaseMult(g1Scalar)
+
+	// mul_G := make([]*bn256.G1, numShares)
+	// mul_H := make([]*bn256.G1, numShares)
+	// mul_XG := make([]*bn256.G1, numShares)
+	// mul_XH := make([]*bn256.G1, numShares)
+	// mul_X := make([]*big.Int, numShares)
+	// mul_C := make([]*big.Int, numShares)
+	// mul_Z := make([]*big.Int, numShares)
+	// mul_RG := make([]*bn256.G1, numShares)
+	// mul_RH := make([]*bn256.G1, numShares)
+
+	// _mul_H := make([]*bn256.G1, numShares)
+	// _mul_XH := make([]*bn256.G1, numShares)
+	// _mul_C := make([]*big.Int, numShares)
+	// _mul_Z := make([]*big.Int, numShares)
+	// _mul_RG := make([]*bn256.G1, numShares)
+	// _mul_RH := make([]*bn256.G1, numShares)
+
+	// starttime := time.Now().UnixMilli()
+	// for i := 0; i < int(n); i++ {
+	// 	//Data owner encrypts the plaintext to ciphertext C and C is published on the blockchain
+	// 	C = Threshold_ElGamal.THEGEncrypt(m, pko)
+
+	// 	VSS_SK, Key = Threshold_ElGamal.THEGKenGen(C, sko, numShares, threshold)
+
+	// 	for i := 0; i < numShares; i++ {
+	// 		CKeys[i] = new(bn256.G1).Add(Key[i], new(bn256.G1).ScalarMult(PKs[i], VSS_SK.Shares[i]))
+	// 	}
+
+	// 	for i := 0; i < numShares; i++ {
+	// 		mul_G[i] = g
+	// 		mul_H[i] = new(bn256.G1).Add(C.C0, PKs[i])
+	// 		mul_X[i] = VSS_SK.Shares[i]
+	// 		mul_XG[i] = new(bn256.G1).ScalarMult(g, mul_X[i])
+	// 		mul_XH[i] = new(bn256.G1).ScalarMult(mul_H[i], mul_X[i])
+	// 	}
+
+	// 	mul_C, mul_Z, mul_XG, mul_XH, mul_RG, mul_RH, _ = dleq.Mul_NewDLEQProof(mul_G, mul_H, mul_XG, mul_XH, mul_X)
+
+	// 	for i := 0; i < numShares; i++ {
+	// 		_mul_H[i] = C.C0
+	// 		_mul_XH[i] = new(bn256.G1).ScalarMult(_mul_H[i], mul_X[i])
+	// 	}
+
+	// 	_mul_C, _mul_Z, mul_XG, _mul_XH, _mul_RG, _mul_RH, _ = dleq.Mul_NewDLEQProof(mul_G, _mul_H, mul_XG, _mul_XH, mul_X)
+	// }
+	// endtime := time.Now().UnixMilli()
+	// fmt.Printf("Figure 7: Secret-Hiding time cost %d ms\n", (endtime-starttime)/n)
+
+	// fmt.Printf("The ciphertext C is %s\n", C)
+	// auth3 := utils.Transact(client, privatekey, big.NewInt(0))
+	// tx3, _ := Contract.UploadCiphertext(auth3, G1ToG1Point(C.C0), G1ToG1Point(C.C1))
+	// receipt3, err := bind.WaitMined(context.Background(), client, tx3)
+	// if err != nil {
+	// 	log.Fatalf("Tx receipt failed: %v", err)
+	// }
+	// fmt.Printf("upload Ciphertext C Gas used: %d\n", receipt3.GasUsed)
+	// //Generate the PVSS shares Key of sko, the share commitment Commitments and {g^si} and publish Commitments and {g^si} on the blockchain
+	// //TODO(Figure 4):test the time cost of THEGKenGen algorithm with the change of TTPs' number
+
+	// var Gs []contract.VerificationG1Point
+	// var Commitments []contract.VerificationG1Point
+	// for i := 0; i < numShares; i++ {
+	// 	g1Point = G1ToG1Point(VSS_SK.Gs[i])
+	// 	Gs = append(Gs, g1Point)
+	// }
+	// for i := 0; i < threshold; i++ {
+	// 	g1Point = G1ToG1Point(VSS_SK.Commitments[i])
+	// 	Commitments = append(Commitments, g1Point)
+	// }
+	// auth4 := utils.Transact(client, privatekey, big.NewInt(0))
+	// tx4, _ := Contract.GsAndCommitment(auth4, Gs, Commitments)
+	// receipt4, err := bind.WaitMined(context.Background(), client, tx4)
+	// if err != nil {
+	// 	log.Fatalf("Tx receipt failed: %v", err)
+	// }
+	// fmt.Printf("upload Gs and Commitments Gas used: %d\n", receipt4.GasUsed)
+	// //Data owner uses the TTPs' public keys to encrypt Key to CKey and publishes CKey on the blockchain
+
+	// //fmt.Printf("CKey is %v\n", CKeys)
+	// var ckeys []contract.VerificationG1Point
+	// for i := 0; i < numShares; i++ {
+	// 	g1Point = G1ToG1Point(CKeys[i])
+	// 	ckeys = append(ckeys, g1Point)
+	// }
+	// auth8 := utils.Transact(client, privatekey, big.NewInt(0))
+	// tx8, _ := Contract.UploadCKey(auth8, ckeys)
+	// receipt8, err := bind.WaitMined(context.Background(), client, tx8)
+	// if err != nil {
+	// 	log.Fatalf("Tx receipt failed: %v", err)
+	// }
+	// fmt.Printf("upload CKeys Gas used: %d\n", receipt8.GasUsed)
+	// //Data owner generates a set of DLEQProof prfs_s and publishes the prfs_s on the blockchain
+
+	// c := make([]*big.Int, numShares)
+	// z := make([]*big.Int, numShares)
+	// xG := make([]*bn256.G1, numShares)
+	// xH := make([]*bn256.G1, numShares)
+	// rG := make([]*bn256.G1, numShares)
+	// rH := make([]*bn256.G1, numShares)
+	// for i := 0; i < numShares; i++ {
+	// 	c[i] = mul_C[i]
+	// 	z[i] = mul_Z[i]
+	// 	xG[i] = mul_XG[i]
+	// 	xH[i] = mul_XH[i]
+	// 	rG[i] = mul_RG[i]
+	// 	rH[i] = mul_RH[i]
+	// }
+	// prfs_s := DLEQProofs{C: c, Z: z, XG: xG, XH: xH, RG: rG, RH: rH}
+
+	// var Proof_g []contract.VerificationG1Point
+	// var Proof_gx []contract.VerificationG1Point
+	// var Proof_h []contract.VerificationG1Point
+	// var Proof_hx []contract.VerificationG1Point
+	// Proof_c := make([]*big.Int, numShares)
+	// var Proof_gr []contract.VerificationG1Point
+	// var Proof_hr []contract.VerificationG1Point
+	// Proof_z := make([]*big.Int, numShares)
+	// for i := 0; i < numShares; i++ {
+	// 	g1Point = G1ToG1Point(mul_G[i])
+	// 	Proof_g = append(Proof_g, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.XG[i])
+	// 	Proof_gx = append(Proof_gx, g1Point)
+	// 	g1Point = G1ToG1Point(mul_H[i])
+	// 	Proof_h = append(Proof_h, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.XH[i])
+	// 	Proof_hx = append(Proof_hx, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.RG[i])
+	// 	Proof_gr = append(Proof_gr, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.RH[i])
+	// 	Proof_hr = append(Proof_hr, g1Point)
+	// 	Proof_c[i] = prfs_s.C[i]
+	// 	Proof_z[i] = prfs_s.Z[i]
+	// }
+	// auth9 := utils.Transact(client, privatekey, big.NewInt(0))
+	// tx9, _ := Contract.UploadDLEQProof(auth9, Proof_g, Proof_gx, Proof_h, Proof_hx, Proof_c, Proof_gr, Proof_hr, Proof_z)
+	// receipt9, err := bind.WaitMined(context.Background(), client, tx9)
+	// if err != nil {
+	// 	log.Fatalf("Tx receipt failed: %v", err)
+	// }
+	// fmt.Printf("Upload the DLEQ proofs(prfs_s) Gas used: %d\n", receipt9.GasUsed)
+
+	// //Data owner generates a set of DLEQProof prfs'_s and publishes the prfs'_s on the blockchain
+
+	// c = make([]*big.Int, numShares)
+	// z = make([]*big.Int, numShares)
+	// xG = make([]*bn256.G1, numShares)
+	// xH = make([]*bn256.G1, numShares)
+	// rG = make([]*bn256.G1, numShares)
+	// rH = make([]*bn256.G1, numShares)
+	// for i := 0; i < numShares; i++ {
+	// 	c[i] = _mul_C[i]
+	// 	z[i] = _mul_Z[i]
+	// 	xG[i] = mul_XG[i]
+	// 	xH[i] = _mul_XH[i]
+	// 	rG[i] = _mul_RG[i]
+	// 	rH[i] = _mul_RH[i]
+	// }
+	// _prfs_s := DLEQProofs{C: c, Z: z, XG: xG, XH: xH, RG: rG, RH: rH}
+
+	// var _Proof_g []contract.VerificationG1Point
+	// var _Proof_gx []contract.VerificationG1Point
+	// var _Proof_h []contract.VerificationG1Point
+	// var _Proof_hx []contract.VerificationG1Point
+	// _Proof_c := make([]*big.Int, numShares)
+	// var _Proof_gr []contract.VerificationG1Point
+	// var _Proof_hr []contract.VerificationG1Point
+	// _Proof_z := make([]*big.Int, numShares)
+	// for i := 0; i < numShares; i++ {
+	// 	g1Point = G1ToG1Point(mul_G[i])
+	// 	_Proof_g = append(_Proof_g, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.XG[i])
+	// 	_Proof_gx = append(_Proof_gx, g1Point)
+	// 	g1Point = G1ToG1Point(mul_H[i])
+	// 	_Proof_h = append(_Proof_h, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.XH[i])
+	// 	_Proof_hx = append(_Proof_hx, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.RG[i])
+	// 	_Proof_gr = append(_Proof_gr, g1Point)
+	// 	g1Point = G1ToG1Point(prfs_s.RH[i])
+	// 	_Proof_hr = append(_Proof_hr, g1Point)
+	// 	_Proof_c[i] = prfs_s.C[i]
+	// 	_Proof_z[i] = prfs_s.Z[i]
+	// }
+	// auth10 := utils.Transact(client, privatekey, big.NewInt(0))
+	// tx10, _ := Contract.UploadDLEQProof(auth10, _Proof_g, _Proof_gx, _Proof_h, _Proof_hx, _Proof_c, _Proof_gr, _Proof_hr, _Proof_z)
+	// receipt10, err := bind.WaitMined(context.Background(), client, tx10)
+	// if err != nil {
+	// 	log.Fatalf("Tx receipt failed: %v", err)
+	// }
+	// fmt.Printf("Upload the DLEQ proofs(prfs'_s) Gas used: %d\n", receipt10.GasUsed)
+
 	//--------------------------Key-Verification-----------------------------//
 	//The verification of {g^si}(finish on the blockchain)
 	result := vss.VerifyShare(VSS_SK.Gs, VSS_SK.Commitments)
 	fmt.Printf("The off-chain result of VSSVerify is %v\n", result)
 	arr := make([]*big.Int, numShares*3+threshold*3)
+
 	for i := 0; i < numShares; i++ {
 		arr[i] = big.NewInt(int64(i + 1))
 	}
+
 	for i := numShares; i < 3*numShares; i = i + 2 {
 		_gs := G1ToBigIntArray(VSS_SK.Gs[(i-numShares)/2])
 		arr[i] = _gs[0]
 		arr[i+1] = _gs[1]
 	}
+
 	for i := 3 * numShares; i < 3*numShares+threshold; i++ {
 		arr[i] = big.NewInt(int64(i - 3*numShares))
 	}
+
 	for i := 3*numShares + threshold; i < 3*numShares+3*threshold; i = i + 2 {
 		_gs := G1ToBigIntArray(VSS_SK.Commitments[(i-(3*numShares+threshold))/2])
 		arr[i] = _gs[0]
 		arr[i+1] = _gs[1]
 	}
+
 	//fmt.Printf("The converted set is %v\n", arr)
 
 	auth5 := utils.Transact(client, privatekey, big.NewInt(0))
 	tx5, _ := Contract.VSSVerify(auth5, arr, big.NewInt(int64(numShares)), big.NewInt(int64(threshold)))
 	VSSResult, _ := Contract.Get(&bind.CallOpts{})
 	receipt5, err := bind.WaitMined(context.Background(), client, tx5)
+
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
+
 	fmt.Printf("VSSVerify Result: %v\n", VSSResult)
 	fmt.Printf("VSSVerify Gas used: %d\n", receipt5.GasUsed)
 
@@ -311,55 +572,78 @@ func main() {
 	tx6, _ := Contract.MulDELQVerify(auth6, Proof_g, Proof_gx, Proof_h, Proof_hx, Proof_c, Proof_gr, Proof_hr, Proof_z)
 	DLEQResult, _ := Contract.Get(&bind.CallOpts{})
 	receipt6, err := bind.WaitMined(context.Background(), client, tx6)
+
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
+
 	fmt.Printf("DLEQVrf Gas used: %d\n", receipt6.GasUsed)
 	fmt.Printf("DLEQVrf result is %v\n", DLEQResult)
-
+	//TODO(Figure 8): Test the gas comsuption of Key-Verification with the change of TTPs' numbers(n VSSVerify+n DLEQVrf)
+	fmt.Printf("Figure 8: the key-verification Gas Used %v\n", receipt6.GasUsed+receipt5.GasUsed)
 	//-------------------------------Key-Delegation-------------------------------------//
 	//TTPs' use their private keys SKs to decrypt CKey to TTPs_Key
+	//TODO(Figure 9):Test the time cost of Key-Delagation with the change of TTPs' number(n decryption operations and n EGEncrypt)
 	TTPs_Key := make([]*bn256.G1, numShares)
-	for i := 0; i < numShares; i++ {
-		TTPs_Key[i] = new(bn256.G1).Add(CKeys[i], new(bn256.G1).Neg(new(bn256.G1).ScalarMult(VSS_SK.Gs[i], SKs[i])))
+	var EKeys *ElGamal.EK
+	starttime = time.Now().UnixMilli()
+
+	for i := 0; i < int(n); i++ {
+		for i := 0; i < numShares; i++ {
+			TTPs_Key[i] = new(bn256.G1).Add(CKeys[i], new(bn256.G1).Neg(new(bn256.G1).ScalarMult(VSS_SK.Gs[i], SKs[i])))
+		}
+		//TTPs use the public key pku to encrypts TTPs_Key to EKey and the EKey is published on the blockchain
+		EKeys = ElGamal.EGEncrypt(TTPs_Key, pku, numShares)
 	}
-	//TTPs use the public key pku to encrypts TTPs_Key to EKey and the EKey is published on the blockchain
-	EKeys := ElGamal.EGEncrypt(TTPs_Key, pku, numShares)
+
+	endtime = time.Now().UnixMilli()
+	fmt.Printf("Figure 9: the time cost of key-delegation is %v ms\n", (endtime-starttime)/n)
 	//fmt.Printf("The key encrypted by TTPs is %v\n", EKeys)
-	ekeys0 := make([][2]*big.Int, numShares)
-	ekeys1 := make([][2]*big.Int, numShares)
+	var ekeys0 []contract.VerificationG1Point
+	var ekeys1 []contract.VerificationG1Point
+
 	for i := 0; i < numShares; i++ {
-		ekey0 := G1ToBigIntArray(EKeys.EK0[i])
-		ekey1 := G1ToBigIntArray(EKeys.EK1[i])
-		ekeys0[i] = ekey0
-		ekeys1[i] = ekey1
+		g1Point = G1ToG1Point(EKeys.EK0[i])
+		ekeys0 = append(ekeys0, g1Point)
+		g1Point = G1ToG1Point(EKeys.EK1[i])
+		ekeys1 = append(ekeys1, g1Point)
 	}
+
 	auth11 := utils.Transact(client, privatekey, big.NewInt(0))
 	tx11, _ := Contract.UploadEKey(auth11, ekeys0, ekeys1)
 	receipt11, err := bind.WaitMined(context.Background(), client, tx11)
+
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
+
 	fmt.Printf("Upload EKeys Gas used: %d\n", receipt11.GasUsed)
 	//---------------------------------------Secret-Recovery-----------------------------------------//
 	//Data user uses their private keys sku to decrypt TTPs_Key to _Key
 	_Key := make([]*bn256.G1, numShares)
-	for i := 0; i < numShares; i++ {
+	var _m *bn256.G1
+	starttime = time.Now().UnixMilli()
+
+	for i := 0; i < int(n); i++ {
 		_Key = ElGamal.EGDecrypt(EKeys, sku, numShares)
+
+		for i := 0; i < numShares; i++ {
+			_prfs_s.XH[i] = _Key[i]
+		}
+		//Data user verifies the _Key
+		Error = dleq.Mul_Verify(_prfs_s.C, _prfs_s.Z, mul_G, _mul_H, _prfs_s.XG, _prfs_s.XH, _prfs_s.RG, _prfs_s.RH)
+		//fmt.Printf("The result of DLEQVrf(prfs'_s) is %v\n", Error)
+		//Data user decrypts the ciphertext to plaintext _m
+		KeyIndices := make([]*big.Int, threshold)
+		for i := 0; i < threshold; i++ {
+			KeyIndices[i] = big.NewInt(int64(i + 1))
+		}
+		//TODO(Figure 5):Test the time cost of THEGDecrypt algorithm with the change of TTPs' number
+		_m = Threshold_ElGamal.THEGDecrypt(C, _Key, KeyIndices, threshold)
 	}
 
-	for i := 0; i < numShares; i++ {
-		_prfs_s.XH[i] = _Key[i]
-	}
-	//Data user verifies the _Key
-	Error = dleq.Mul_Verify(_prfs_s.C, _prfs_s.Z, mul_G, _mul_H, _prfs_s.XG, _prfs_s.XH, _prfs_s.RG, _prfs_s.RH)
-	fmt.Printf("The result of DLEQVrf(prfs'_s) is %v\n", Error)
-	//Data user decrypts the ciphertext to plaintext _m
-	KeyIndices := make([]*big.Int, threshold)
-	for i := 0; i < threshold; i++ {
-		KeyIndices[i] = big.NewInt(int64(i + 1))
-	}
-	_m := Threshold_ElGamal.THEGDecrypt(C, _Key, KeyIndices, threshold)
+	endtime = time.Now().UnixMilli()
+	fmt.Printf("Figure 10: the time cost of Secret-Recovery is %v ms\n", (endtime-starttime)/n)
 	fmt.Printf("The plaintext _m is %s\n", _m)
 	//---------------------------------------Dispute----------------------------------------//
 	//Data user generates a DIS and publishes it on the blockchain(e.g. _Key[0])
@@ -369,44 +653,55 @@ func main() {
 	_xG := new(bn256.G1).ScalarMult(g, sku)
 	_xH := new(bn256.G1).ScalarMult(EKeys.EK0[0], sku)
 	//Data user generates the DLEQProof of sku prfs_sku and publishes the prfs_sku on the blockchain
-	_c, _z, _rG, _rH, _ := dleq.NewDLEQProof(g, EKeys.EK0[0], _xG, _xH, sku)
+	starttime = time.Now().UnixMicro()
+	var prfs_sku DLEQProof
 
-	prfs_sku := DLEQProof{C: _c, Z: _z, XG: _xG, XH: _xH, RG: _rG, RH: _rH}
-	Dis_proof_g := make([][2]*big.Int, 1)
-	Dis_proof_gx := make([][2]*big.Int, 1)
-	Dis_proof_h := make([][2]*big.Int, 1)
-	Dis_proof_hx := make([][2]*big.Int, 1)
-	Dis_proof_c := make([]*big.Int, 1)
-	Dis_proof_gr := make([][2]*big.Int, 1)
-	Dis_proof_hr := make([][2]*big.Int, 1)
-	Dis_proof_z := make([]*big.Int, 1)
-	for i := 0; i < numDispute; i++ {
-		Dis_proof_g[i] = G1ToBigIntArray(g)
-		Dis_proof_h[i] = G1ToBigIntArray(EKeys.EK0[i])
-		Dis_proof_gx[i] = G1ToBigIntArray(prfs_sku.XG)
-		Dis_proof_hx[i] = G1ToBigIntArray(prfs_sku.XH)
-		Dis_proof_gr[i] = G1ToBigIntArray(prfs_sku.RG)
-		Dis_proof_hr[i] = G1ToBigIntArray(prfs_sku.RH)
-		Dis_proof_c[i] = prfs_sku.C
-		Dis_proof_z[i] = prfs_sku.Z
+	for i := 0; i < int(n); i++ {
+		_c, _z, _rG, _rH, _ := dleq.NewDLEQProof(g, EKeys.EK0[0], _xG, _xH, sku)
+		prfs_sku = DLEQProof{C: _c, Z: _z, XG: _xG, XH: _xH, RG: _rG, RH: _rH}
 	}
+
+	endtime = time.Now().UnixMicro()
+	fmt.Printf("DLEQ time cost %d us\n", (endtime-starttime)/n)
+	Dis_proof_g := G1ToG1Point(g)
+	Dis_proof_gx := G1ToG1Point(prfs_sku.XG)
+	Dis_proof_h := G1ToG1Point(EKeys.EK0[0])
+	Dis_proof_hx := G1ToG1Point(prfs_sku.XH)
+	Dis_proof_c := prfs_sku.C
+	Dis_proof_gr := G1ToG1Point(prfs_sku.RG)
+	Dis_proof_hr := G1ToG1Point(prfs_sku.RH)
+	Dis_proof_z := prfs_sku.Z
+
 	auth12 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx12, _ := Contract.UploadDLEQProof(auth12, Dis_proof_g, Dis_proof_gx, Dis_proof_h, Dis_proof_hx, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
+	tx12, _ := Contract.UploadDisputeProof(auth12, Dis_proof_g, Dis_proof_gx, Dis_proof_h, Dis_proof_hx, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
 	receipt12, err := bind.WaitMined(context.Background(), client, tx12)
+
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
+
 	fmt.Printf("Upload a disputeDLEQProof(prfs_sku) Gas used: %d\n", receipt12.GasUsed)
 	//Vefify the dispute DIS
-	Error = dleq.Verify(prfs_sku.C, prfs_sku.Z, g, EKeys.EK0[0], pku, DIS[0], prfs_sku.RG, prfs_sku.RH)
+	starttime = time.Now().UnixMicro()
+
+	for i := 0; i < int(n); i++ {
+		Error = dleq.Verify(prfs_sku.C, prfs_sku.Z, g, EKeys.EK0[0], pku, DIS[0], prfs_sku.RG, prfs_sku.RH)
+	}
+
+	endtime = time.Now().UnixMicro()
+	fmt.Printf("DLEQVrf time cost %d us\n", (endtime-starttime)/n)
 	fmt.Printf("The off-chain result of dispute verification is %v\n", Error)
 	auth13 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx13, _ := Contract.DELQVerify(auth13, Dis_proof_g[0], Dis_proof_gx[0], Dis_proof_h[0], Dis_proof_hx[0], Dis_proof_c[0], Dis_proof_gr[0], Dis_proof_hr[0], Dis_proof_z[0])
+	tx13, _ := Contract.DELQVerify(auth13, Dis_proof_g, Dis_proof_gx, Dis_proof_h, Dis_proof_hx, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
 	DisputeResult, _ := Contract.Get(&bind.CallOpts{})
 	receipt13, err := bind.WaitMined(context.Background(), client, tx13)
+
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("Verify a dispute Gas used: %d\n", receipt13.GasUsed)
+
+	//TODO(Figure 11):Test the gas cost of a dispute verification
+	fmt.Printf("Figure 11: Dispute verification Gas used %v\n", receipt13.GasUsed)
 	fmt.Printf("Dispute verification result is %v\n", DisputeResult)
+
 }
