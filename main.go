@@ -5,7 +5,7 @@ import (
 	"crypto/rand"
 	"dttp/compile/contract"
 	"dttp/crypto/ElGamal"
-	"dttp/crypto/Threshold_ElGamal"
+	"dttp/crypto/ThresholdElGamal"
 	"dttp/crypto/dleq"
 	"dttp/crypto/vss"
 	"dttp/utils"
@@ -111,7 +111,7 @@ func main() {
 
 	//------------------------------------------Registration-------------------------------------//
 	//Data owner's key pair (sko,pko) and the public key pko is published on the blockchain
-	sko, pko := Threshold_ElGamal.THEGSetup()
+	sko, pko := ThresholdElGamal.THEGSetup()
 	//TTPs' key pairs (SKs, PKs) and these public keys PKs are published on the blockchain
 	SKs := make([]*big.Int, numShares)  //the set of TTPs' private key
 	PKs := make([]*bn256.G1, numShares) //the set of TTPs' public key
@@ -145,7 +145,7 @@ func main() {
 	// //Randomly generate a plaintext m
 	m, _ := rand.Int(rand.Reader, order)
 	//Data owner encrypts the plaintext to ciphertext C and C is published on the blockchain
-	C := Threshold_ElGamal.THEGEncrypt(m, pko)
+	C := ThresholdElGamal.THEGEncrypt(m, pko)
 	fmt.Printf("The ciphertext C is %s\n", C)
 
 	auth3 := utils.Transact(client, privatekey, big.NewInt(0))
@@ -161,7 +161,7 @@ func main() {
 	var Key []*bn256.G1
 	starttime := time.Now().UnixMilli()
 	for i := 0; i < int(n); i++ {
-		VSS_SK, Key = Threshold_ElGamal.THEGKenGen(C, sko, numShares, threshold)
+		VSS_SK, Key = ThresholdElGamal.THEGKenGen(C, sko, numShares, threshold)
 	}
 	endtime := time.Now().UnixMilli()
 	fmt.Printf("Figure 4: the time cost of THEGKenGen is %v ms\n", (endtime-starttime)/n)
@@ -330,7 +330,7 @@ func main() {
 	// //TODO(Figure 7):Test the time cost of Secret-Hiding with the change of TTPs' number(1 THEGEncrypt+1 THEGKeyGen+ 2n DLEQProof)
 	// //Randomly generate a plaintext m
 	// m, _ := rand.Int(rand.Reader, order)
-	// var C *Threshold_ElGamal.C
+	// var C *ThresholdElGamal.C
 	// var VSS_SK *vss.SecretSharing
 	// var Key []*bn256.G1
 	// CKeys := make([]*bn256.G1, numShares)
@@ -359,9 +359,9 @@ func main() {
 	// starttime := time.Now().UnixMilli()
 	// for i := 0; i < int(n); i++ {
 	// 	//Data owner encrypts the plaintext to ciphertext C and C is published on the blockchain
-	// 	C = Threshold_ElGamal.THEGEncrypt(m, pko)
+	// 	C = ThresholdElGamal.THEGEncrypt(m, pko)
 
-	// 	VSS_SK, Key = Threshold_ElGamal.THEGKenGen(C, sko, numShares, threshold)
+	// 	VSS_SK, Key = ThresholdElGamal.THEGKenGen(C, sko, numShares, threshold)
 
 	// 	for i := 0; i < numShares; i++ {
 	// 		CKeys[i] = new(bn256.G1).Add(Key[i], new(bn256.G1).ScalarMult(PKs[i], VSS_SK.Shares[i]))
@@ -643,7 +643,7 @@ func main() {
 			KeyIndices[i] = big.NewInt(int64(i + 1))
 		}
 		//TODO(Figure 5):Test the time cost of THEGDecrypt algorithm with the change of TTPs' number
-		_m = Threshold_ElGamal.THEGDecrypt(C, _Key, KeyIndices, threshold)
+		_m = ThresholdElGamal.THEGDecrypt(C, _Key, KeyIndices, threshold)
 	}
 
 	endtime = time.Now().UnixMilli()
