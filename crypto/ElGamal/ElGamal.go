@@ -2,7 +2,7 @@ package ElGamal
 
 import (
 	"crypto/rand"
-	"fmt"
+	//"fmt"
 	"math/big"
 
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/google"
@@ -24,7 +24,7 @@ func EGSetup()(*big.Int, *bn256.G1){
 func EGEncrypt(K []*bn256.G1, PK *bn256.G1, numShares int)(*EK){
 	ek0:=make([]*bn256.G1,numShares)
 	ek1:=make([]*bn256.G1,numShares)
-	fmt.Printf("The plaintext is %s\n",K)
+	//fmt.Printf("The plaintext is %s\n",K)
 	l,_ := rand.Int(rand.Reader, order)
 	for i:=0;i<numShares;i++{
 		ek0[i]=new(bn256.G1).ScalarBaseMult(l)
