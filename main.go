@@ -103,7 +103,7 @@ func main() {
 	threshold := numShares/2 + 1
 	//threshold := 2*numShares/3 + 1
 
-	var n int64 = 100
+	var n int64 = 1
 
 	fmt.Printf("The number of shares is %v\n", numShares)
 	fmt.Printf("The threshold value is %v\n", threshold)
@@ -126,10 +126,14 @@ func main() {
 		TTPs_PKs = append(TTPs_PKs, g1Point)
 
 	}
+
 	//TODO(Figure 6)： Test the gas comsuption of uploading TTPs' PKs with the number challenge of TTPs
 	auth2 := utils.Transact(client, privatekey, big.NewInt(0))
 	tx2, _ := Contract.UploadMultiplePKs(auth2, TTPs_PKs)
+
 	receipt2, err := bind.WaitMined(context.Background(), client, tx2)
+	_pk, _ := Contract.Get(&bind.CallOpts{})
+	fmt.Printf("_pk:%v,%v\n", len(TTPs_PKs), _pk)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
