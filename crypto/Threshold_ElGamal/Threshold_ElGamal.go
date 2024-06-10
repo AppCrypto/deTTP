@@ -2,7 +2,7 @@ package Threshold_ElGamal
 
 import (
 	"crypto/rand"
-	"fmt"
+	//"fmt"
 	"math/big"
 	"dttp/crypto/vss"
 	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/google"
