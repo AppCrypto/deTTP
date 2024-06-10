@@ -1,20 +1,16 @@
-# Proof of Concept codes of `Data exchange for the metaverse with accountable decentralized arbitrators and an incentive mechanism`
+# `Data exchange for the metaverse with accountable decentralized arbitrators and an incentive mechanism`
 
 
-# Pre requisites
+# Pre-requisites
 
-* `Golang`  https://go.dev/dl/   Version：1.22.0 linux/amd64
+* `Golang`  https://go.dev/dl/   
 
 * `Solidity`  https://docs.soliditylang.org/en/v0.8.2/installing-solidity.html  Version: 0.8.20
 
 * `Solidity compiler (solc)`  https://docs.soliditylang.org/en/latest/installing-solidity.html  
 Version: 0.8.25-develop
 
-* `Ganache-cli`    Version：v7.9.2 (@ganache/cli: 0.10.2, @ganache/core: 0.10.2)
-
-    ```bash
-    npm install -g ganache  
-    ```
+* `Ganache-cli`  https://www.npmjs.com/package/ganache-cli
     
 * `Abigen`    Version: v1.14.3
     ```bash
@@ -22,27 +18,24 @@ Version: 0.8.25-develop
     cd $GOPATH/src/github.com/ethereum/go-ethereum/
     sudo make && make devtools 
     ```
-    
 
-# Package description
 
-* `Main.go`    Main executable file, run this file to invoke the contract.
+# File description
 
-* `compile/contract/`  The folder for store solidity(.sol) contract file.
+* `main.go`   run this file to test the functionalities of the framework.
 
-* `compile/compile.sh`  The script file that compile and generate ABI from a solidity for later use.
+* `incentive.go`  run this file to test the incentive mechanism.
 
-* `genPrvKey.sh`  The script file that run ganache for the first time to get the account key and generate the`.env` file.
+* `compile/contract/`  The folder stores contract source code file (.sol) and generated go contract file.
 
-* `.env`  The file to store private key for the default ganache account. 
+* `compile/compile.sh`  The script file compiles solidity and generates go contract file.
 
-* `utils/utils.go`  The file for deploying and compiling contracts.
+* `genPrvKey.sh`  The script file generates accounts and stores in the`.env` file.
 
-* `crypto/`  The folder for store cryptographic primitives (EIGamal, Threshold_ElGamal,DLEQ, VSS).
 
-# How to use it
+# How to run
 
-1. Generate private keys
+1. Generate private keys to generate the `.env` file
 
     ```bash
     bash genPrvKey.sh

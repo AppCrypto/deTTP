@@ -10,11 +10,11 @@ OS=$(uname -s)
 case "$OS" in
   Linux*)
     echo "Linux"
-    ganache --mnemonic "dttp"  > ganache_output.txt &
+    ganache --mnemonic "dttp"  -l 90071992547 > ganache_output.txt &
     ;;
   Darwin*)
     echo "macOS"
-    ganache-cli --mnemonic "dttp" > ganache_output.txt &
+    ganache-cli --mnemonic "dttp" -l 90071992547 > ganache_output.txt &
     ;;
   CYGWIN*|MINGW32*|MSYS*|MINGW*)
     echo "Windows"
