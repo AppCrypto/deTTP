@@ -62,7 +62,10 @@ func main() {
 		if err != nil {
 			log.Fatalf("Tx receipt failed: %v", err)
 		}
-		fmt.Printf("TTP%d registration and calculation of EDAI Gas used: %d\n", i, receipt1.GasUsed)
+		if i== n-2{
+			fmt.Printf("TTP%d registration and calculation of EDAI Gas used: %d\n", i, receipt1.GasUsed)	
+		}
+		
 	}
 	fauth3 := utils.Transact(client, privatekey1, big.NewInt(0))
 
@@ -91,7 +94,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("Tx receipt failed: %v", err)
 		}
-		fmt.Printf("TTP%d deposit money Gas used: %d\n", i, receipt2.GasUsed)
+		if i== n-1 {
+			fmt.Printf("TTP%d deposit money Gas used: %d\n", i, receipt2.GasUsed)
+		}
 	}
 
 	auth5 := utils.Transact(client, privatekey1, big.NewInt(0))
@@ -195,7 +200,9 @@ func main() {
 		if err != nil {
 			log.Fatalf("Tx receipt failed: %v", err)
 		}
-		fmt.Printf("TTP%d deposit money Gas used: %d\n", i, receipt7.GasUsed)
+		if i== n-2 {
+			fmt.Printf("TTP%d deposit money Gas used: %d\n", i, receipt7.GasUsed)
+		}
 
 	}
 

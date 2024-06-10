@@ -15,8 +15,7 @@ Version: 0.8.25-develop
 * `Abigen`    Version: v1.14.3
     ```bash
     go get -u github.com/ethereum/go-ethereum
-    cd $GOPATH/src/github.com/ethereum/go-ethereum/
-    sudo make && make devtools 
+    go install github.com/ethereum/go-ethereum/cmd/abigen@v1.14.3
     ```
 
 
@@ -44,7 +43,7 @@ Version: 0.8.25-develop
 2. start ganache
 
     ```bash
-    ganache --mnemonic "dttp" -l 90071992547
+    ganache --mnemonic "dttp" -l 90071992547 -e 1000
     ```
 
 3. Compile the smart contract code

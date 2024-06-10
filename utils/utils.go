@@ -52,22 +52,17 @@ func Transact(client *ethclient.Client, privatekey string, value *big.Int) *bind
 	publicKey := key.Public()
 	publicKeyECDSA, _ := publicKey.(*ecdsa.PublicKey)
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		log.Fatalf("Failed to get nonce: %v", err)
-	}
+	nonce, _ := client.PendingNonceAt(context.Background(), fromAddress)
 
-	gasLimit := uint64(90071992547)
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		log.Fatalf("Failed to get gas price: %v", err)
-	}
-	chainID, err := client.ChainID(context.Background())
+	gasLimit := uint64(900719925)
+	gasPrice, _ := client.SuggestGasPrice(context.Background())
+	chainID, _ := client.ChainID(context.Background())
 	auth, _ := bind.NewKeyedTransactorWithChainID(key, chainID)
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = value
 	auth.GasLimit = gasLimit
 	auth.GasPrice = gasPrice
+	//fmt.Println(auth)
 	return auth
 }
 
