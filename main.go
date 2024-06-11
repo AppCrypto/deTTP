@@ -82,11 +82,11 @@ func main() {
 
 	privatekey := utils.GetENV("PRIVATE_KEY_1")
 
-	auth0 := utils.Transact(client, privatekey, big.NewInt(0))
+	auth := utils.Transact(client, privatekey, big.NewInt(0))
 
-	address, tx0 := utils.Deploy(client, contract_name, auth0)
+	address, tx := utils.Deploy(client, contract_name, auth)
 
-	receipt, err := bind.WaitMined(context.Background(), client, tx0)
+	receipt, err := bind.WaitMined(context.Background(), client, tx)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
@@ -110,8 +110,31 @@ func main() {
 	var g1Point contract.VerificationG1Point
 
 	//------------------------------------------Registration-------------------------------------//
+	//The public parameters
+	g1 := new(bn256.G1)
+	g1Scalar := big.NewInt(1)
+	g := g1.ScalarBaseMult(g1Scalar)
+
+	auth0 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx0, _ := Contract.UploadGenerator(auth0, G1ToG1Point(g))
+
+	receipt0, err := bind.WaitMined(context.Background(), client, tx0)
+	if err != nil {
+		log.Fatalf("Tx receipt failed: %v", err)
+	}
+	fmt.Printf("Upload the generator Gas used: %d\n", receipt0.GasUsed)
+
 	//Data owner's key pair (sko,pko) and the public key pko is published on the blockchain
 	sko, pko := ThresholdElGamal.THEGSetup()
+	auth1 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx1, _ := Contract.UploadOwnerPk(auth1, G1ToG1Point(pko))
+
+	receipt1, err := bind.WaitMined(context.Background(), client, tx1)
+	if err != nil {
+		log.Fatalf("Tx receipt failed: %v", err)
+	}
+	fmt.Printf("Upload Owner's pk Gas used: %d\n", receipt1.GasUsed)
+
 	//TTPs' key pairs (SKs, PKs) and these public keys PKs are published on the blockchain
 	SKs := make([]*big.Int, numShares)  //the set of TTPs' private key
 	PKs := make([]*bn256.G1, numShares) //the set of TTPs' public key
@@ -129,11 +152,9 @@ func main() {
 
 	//TODO(Figure 6)： Test the gas comsuption of uploading TTPs' PKs with the number challenge of TTPs
 	auth2 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx2, _ := Contract.UploadMultiplePKs(auth2, TTPs_PKs)
+	tx2, _ := Contract.UploadTTPsPk(auth2, TTPs_PKs)
 
 	receipt2, err := bind.WaitMined(context.Background(), client, tx2)
-	_pk, _ := Contract.Get(&bind.CallOpts{})
-	fmt.Printf("_pk:%v,%v\n", len(TTPs_PKs), _pk)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
@@ -141,6 +162,14 @@ func main() {
 	//Data user's key pair and the public key is published on the blockchain
 
 	sku, pku := ElGamal.EGSetup()
+	auth22 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx22, _ := Contract.UploadUserPk(auth22, G1ToG1Point(pku))
+
+	receipt22, err := bind.WaitMined(context.Background(), client, tx22)
+	if err != nil {
+		log.Fatalf("Tx receipt failed: %v", err)
+	}
+	fmt.Printf("Upload User's pk Gas used: %d\n", receipt22.GasUsed)
 	//---------------------------------------Secret-Hiding-----------------------------------------//
 	// //Randomly generate a plaintext m
 	m, _ := rand.Int(rand.Reader, order)
@@ -172,17 +201,17 @@ func main() {
 		g1Point = G1ToG1Point(VSS_SK.Gs[i])
 		Gs = append(Gs, g1Point)
 	}
-	for i := 0; i < threshold; i++ {
-		g1Point = G1ToG1Point(VSS_SK.Commitments[i])
-		Commitments = append(Commitments, g1Point)
-	}
 	auth4 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx4, _ := Contract.GsAndCommitment(auth4, Gs, Commitments)
+	tx4, _ := Contract.UploadGs(auth4, Gs)
 	receipt4, err := bind.WaitMined(context.Background(), client, tx4)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("upload Gs and Commitments Gas used: %d\n", receipt4.GasUsed)
+	fmt.Printf("upload Gs Gas used: %d\n", receipt4.GasUsed)
+	for i := 0; i < threshold; i++ {
+		g1Point = G1ToG1Point(VSS_SK.Commitments[i])
+		Commitments = append(Commitments, g1Point)
+	}
 	//Data owner uses the TTPs' public keys to encrypt Key to CKey and publishes CKey on the blockchain
 	CKeys := make([]*bn256.G1, numShares)
 	for i := 0; i < numShares; i++ {
@@ -195,16 +224,13 @@ func main() {
 		ckeys = append(ckeys, g1Point)
 	}
 	auth8 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx8, _ := Contract.UploadCKey(auth8, ckeys)
+	tx8, _ := Contract.UploadCKeys(auth8, ckeys)
 	receipt8, err := bind.WaitMined(context.Background(), client, tx8)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("upload CKeys Gas used: %d\n", receipt8.GasUsed)
+	fmt.Printf("Upload CKeys Gas used: %d\n", receipt8.GasUsed)
 	//Data owner generates a set of DLEQProof prfs_s and publishes the prfs_s on the blockchain
-	g1 := new(bn256.G1)
-	g1Scalar := big.NewInt(1)
-	g := g1.ScalarBaseMult(g1Scalar)
 
 	mul_G := make([]*bn256.G1, numShares)
 	mul_H := make([]*bn256.G1, numShares)
@@ -262,7 +288,7 @@ func main() {
 		Proof_z[i] = prfs_s.Z[i]
 	}
 	auth9 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx9, _ := Contract.UploadDLEQProof(auth9, Proof_g, Proof_gx, Proof_h, Proof_hx, Proof_c, Proof_gr, Proof_hr, Proof_z)
+	tx9, _ := Contract.UploadDLEQProofCKeys(auth9, Proof_c, Proof_gr, Proof_hr, Proof_z)
 	receipt9, err := bind.WaitMined(context.Background(), client, tx9)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
@@ -319,7 +345,7 @@ func main() {
 		_Proof_z[i] = prfs_s.Z[i]
 	}
 	auth10 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx10, _ := Contract.UploadDLEQProof(auth10, _Proof_g, _Proof_gx, _Proof_h, _Proof_hx, _Proof_c, _Proof_gr, _Proof_hr, _Proof_z)
+	tx10, _ := Contract.UploadDLEQProofKeys(auth10, _Proof_c, _Proof_gr, _Proof_hr, _Proof_z)
 	receipt10, err := bind.WaitMined(context.Background(), client, tx10)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
@@ -534,33 +560,33 @@ func main() {
 	//The verification of {g^si}(finish on the blockchain)
 	result := vss.VerifyShare(VSS_SK.Gs, VSS_SK.Commitments)
 	fmt.Printf("The off-chain result of VSSVerify is %v\n", result)
-	arr := make([]*big.Int, numShares*3+threshold*3)
+	// arr := make([]*big.Int, numShares*3+threshold*3)
 
-	for i := 0; i < numShares; i++ {
-		arr[i] = big.NewInt(int64(i + 1))
-	}
+	// for i := 0; i < numShares; i++ {
+	// 	arr[i] = big.NewInt(int64(i + 1))
+	// }
 
-	for i := numShares; i < 3*numShares; i = i + 2 {
-		_gs := G1ToBigIntArray(VSS_SK.Gs[(i-numShares)/2])
-		arr[i] = _gs[0]
-		arr[i+1] = _gs[1]
-	}
+	// for i := numShares; i < 3*numShares; i = i + 2 {
+	// 	_gs := G1ToBigIntArray(VSS_SK.Gs[(i-numShares)/2])
+	// 	arr[i] = _gs[0]
+	// 	arr[i+1] = _gs[1]
+	// }
 
-	for i := 3 * numShares; i < 3*numShares+threshold; i++ {
-		arr[i] = big.NewInt(int64(i - 3*numShares))
-	}
+	// for i := 3 * numShares; i < 3*numShares+threshold; i++ {
+	// 	arr[i] = big.NewInt(int64(i - 3*numShares))
+	// }
 
-	for i := 3*numShares + threshold; i < 3*numShares+3*threshold; i = i + 2 {
-		_gs := G1ToBigIntArray(VSS_SK.Commitments[(i-(3*numShares+threshold))/2])
-		arr[i] = _gs[0]
-		arr[i+1] = _gs[1]
-	}
+	// for i := 3*numShares + threshold; i < 3*numShares+3*threshold; i = i + 2 {
+	// 	_gs := G1ToBigIntArray(VSS_SK.Commitments[(i-(3*numShares+threshold))/2])
+	// 	arr[i] = _gs[0]
+	// 	arr[i+1] = _gs[1]
+	// }
 
-	//fmt.Printf("The converted set is %v\n", arr)
+	// fmt.Printf("The converted set is %v\n", arr)
 
 	auth5 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx5, _ := Contract.VSSVerify(auth5, arr, big.NewInt(int64(numShares)), big.NewInt(int64(threshold)))
-	VSSResult, _ := Contract.Get(&bind.CallOpts{})
+	tx5, _ := Contract.VSSVerify(auth5, Commitments, big.NewInt(int64(numShares)), big.NewInt(int64(threshold)))
+	VSSResult, _ := Contract.GetVrfResult(&bind.CallOpts{})
 	receipt5, err := bind.WaitMined(context.Background(), client, tx5)
 
 	if err != nil {
@@ -573,8 +599,8 @@ func main() {
 	Error := dleq.Mul_Verify(prfs_s.C, prfs_s.Z, mul_G, mul_H, prfs_s.XG, prfs_s.XH, prfs_s.RG, prfs_s.RH)
 	fmt.Printf("The off-chain result of DLEQVrf(prfs_s) is %v\n", Error)
 	auth6 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx6, _ := Contract.MulDELQVerify(auth6, Proof_g, Proof_gx, Proof_h, Proof_hx, Proof_c, Proof_gr, Proof_hr, Proof_z)
-	DLEQResult, _ := Contract.Get(&bind.CallOpts{})
+	tx6, _ := Contract.DLEQVerifyCKeys(auth6)
+	DLEQResult, _ := Contract.GetVrfResult(&bind.CallOpts{})
 	receipt6, err := bind.WaitMined(context.Background(), client, tx6)
 
 	if err != nil {
@@ -614,7 +640,7 @@ func main() {
 	}
 
 	auth11 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx11, _ := Contract.UploadEKey(auth11, ekeys0, ekeys1)
+	tx11, _ := Contract.UploadEKeys(auth11, ekeys0, ekeys1)
 	receipt11, err := bind.WaitMined(context.Background(), client, tx11)
 
 	if err != nil {
@@ -654,6 +680,14 @@ func main() {
 	numDispute := 1 //the number of dispute
 	DIS := make([]*bn256.G1, numDispute)
 	DIS[0] = new(bn256.G1).ScalarMult(EKeys.EK0[0], sku)
+	auth24 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx24, _ := Contract.UploadDispute(auth24, G1ToG1Point(DIS[0]))
+	receipt24, err := bind.WaitMined(context.Background(), client, tx24)
+	if err != nil {
+		log.Fatalf("Tx receipt failed: %v", err)
+	}
+
+	fmt.Printf("Upload a dispute Gas used: %d\n", receipt24.GasUsed)
 	_xG := new(bn256.G1).ScalarMult(g, sku)
 	_xH := new(bn256.G1).ScalarMult(EKeys.EK0[0], sku)
 	//Data user generates the DLEQProof of sku prfs_sku and publishes the prfs_sku on the blockchain
@@ -667,19 +701,14 @@ func main() {
 
 	endtime = time.Now().UnixMicro()
 	fmt.Printf("DLEQ time cost %d us\n", (endtime-starttime)/n)
-	Dis_proof_g := G1ToG1Point(g)
-	Dis_proof_gx := G1ToG1Point(prfs_sku.XG)
-	Dis_proof_h := G1ToG1Point(EKeys.EK0[0])
-	Dis_proof_hx := G1ToG1Point(prfs_sku.XH)
 	Dis_proof_c := prfs_sku.C
 	Dis_proof_gr := G1ToG1Point(prfs_sku.RG)
 	Dis_proof_hr := G1ToG1Point(prfs_sku.RH)
 	Dis_proof_z := prfs_sku.Z
 
 	auth12 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx12, _ := Contract.UploadDisputeProof(auth12, Dis_proof_g, Dis_proof_gx, Dis_proof_h, Dis_proof_hx, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
+	tx12, _ := Contract.UploadDisputeProof(auth12, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
 	receipt12, err := bind.WaitMined(context.Background(), client, tx12)
-
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
@@ -695,9 +724,10 @@ func main() {
 	endtime = time.Now().UnixMicro()
 	fmt.Printf("DLEQVrf time cost %d us\n", (endtime-starttime)/n)
 	fmt.Printf("The off-chain result of dispute verification is %v\n", Error)
+	fmt.Printf("Disproof g is %v\n", g)
 	auth13 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx13, _ := Contract.DELQVerify(auth13, Dis_proof_g, Dis_proof_gx, Dis_proof_h, Dis_proof_hx, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
-	DisputeResult, _ := Contract.Get(&bind.CallOpts{})
+	tx13, _ := Contract.DLEQVerifyDis(auth13, big.NewInt(0))
+	DisputeResult, _ := Contract.GetVrfResult(&bind.CallOpts{})
 	receipt13, err := bind.WaitMined(context.Background(), client, tx13)
 
 	if err != nil {
