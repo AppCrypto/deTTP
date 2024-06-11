@@ -505,9 +505,24 @@ contract Verification
         return result[0];
     }
 
-
-    function VSSVerify(uint256[] memory arr, uint256 len1, uint256 len2) public payable returns (bool)
+    uint256[] arr;
+    function VSSVerify(G1Point[] memory commitments, uint256 len1, uint256 len2) public payable returns (bool)
     {
+        //uint256[] memory arr = new uint256[](3*len1+3*len2);
+        for(uint i=0;i<len1;i++){
+            arr.push(i+1);
+        }
+        for(uint i=0;i<len1;i++){
+            arr.push(Gs[i].X);
+            arr.push(Gs[i].Y);
+        }
+        for(uint i=0;i<len2;i++){
+            arr.push(i);
+        }
+        for(uint i=0;i<len2;i++){
+            arr.push(commitments[i].X);
+            arr.push(commitments[i].Y);
+        }
         for (uint256 i = 0; i < len1 * 2; i += 2) {
             G1Point memory xG = g1mul(P1(), 0);
             for (uint256 j = 0; j < len2 * 2; j += 2) {
@@ -525,17 +540,17 @@ contract Verification
         return true;
     }
 
-    function Mul_DELQVerify(G1Point[] memory g, G1Point[] memory y1, G1Point[] memory h, G1Point[] memory y2, uint256[] memory c, G1Point[] memory a1, G1Point[] memory a2, uint256[] memory z) public payable returns (bool)
+    function DLEQVerifyCKeys() public payable returns (bool)
     {
-        for (uint256 i = 0; i < g.length; i++)
+        for (uint256 i = 0; i < DLEQProofCKeys.length; i++)
         {
-            G1Point memory gG = g1mul(g[i], z[i]);
-            G1Point memory y1G = g1mul(y1[i], c[i]);
+            G1Point memory gG = g1mul(g, DLEQProofCKeys[i].z);
+            G1Point memory y1G = g1mul(Gs[i], DLEQProofCKeys[i].c);
 
-            G1Point memory hG = g1mul(h[i], z[i]);
-            G1Point memory y2G = g1mul(y2[i], c[i]);
+            G1Point memory hG = g1mul(g1add(ciphertext.C0, TTPsPk[i]), DLEQProofCKeys[i].z);
+            G1Point memory y2G = g1mul(CKeys[i], DLEQProofCKeys[i].c);
 
-            if ((a1[i].X != g1add(gG, y1G).X) || (a1[i].Y != g1add(gG, y1G).Y) || (a2[i].X != g1add(hG, y2G).X) || (a2[i].Y != g1add(hG, y2G).Y))
+            if ((DLEQProofCKeys[i].a1.X != g1add(gG, y1G).X) || (DLEQProofCKeys[i].a1.Y != g1add(gG, y1G).Y) || (DLEQProofCKeys[i].a2.X != g1add(hG, y2G).X) || (DLEQProofCKeys[i].a2.Y != g1add(hG, y2G).Y))
             {
                 VerificationResult.push(false);
                 return false;
@@ -545,18 +560,20 @@ contract Verification
         return true;
     }
 
-    function DELQVerify(G1Point memory g, G1Point memory y1, G1Point memory h, G1Point memory y2, uint256 c, G1Point memory a1, G1Point memory a2, uint256 z) public payable
+    function DLEQVerifyDis(uint index) public payable returns (bool)
     {
-        G1Point memory gG = g1mul(g, z);
-        G1Point memory y1G = g1mul(y1, c);
-        G1Point memory hG = g1mul(h, z);
-        G1Point memory y2G = g1mul(y2, c);
+        G1Point memory gG = g1mul(g, DLEQProofDis.z);
+        G1Point memory y1G = g1mul(UserPk, DLEQProofDis.c);
+        G1Point memory hG = g1mul(EKeys[index].EK0, DLEQProofDis.z);
+        G1Point memory y2G = g1mul(Dispute, DLEQProofDis.c);
 
-        if ((a1.X != g1add(gG, y1G).X) || (a1.Y != g1add(gG, y1G).Y) || (a2.X != g1add(hG, y2G).X) || (a2.Y != g1add(hG, y2G).Y))
+        if ((DLEQProofDis.a1.X != g1add(gG, y1G).X) || (DLEQProofDis.a1.Y != g1add(gG, y1G).Y) || (DLEQProofDis.a2.X != g1add(hG, y2G).X) || (DLEQProofDis.a2.Y != g1add(hG, y2G).Y))
         {
             VerificationResult.push(false);
+            return false;
         }
         VerificationResult.push(true);
+        return true;
     }
 
     // Encoding of field elements is: X[0] * z + X[1]
@@ -568,10 +585,6 @@ contract Verification
     }
 
     struct DLEQProof {
-        G1Point g;
-        G1Point h;
-        G1Point y1;
-        G1Point y2;
         G1Point a1;
         G1Point a2;
         uint256 c;
@@ -583,80 +596,124 @@ contract Verification
         G1Point EK1;
     }
 
+    G1Point g;
+    G1Point OwnerPk;
+    G1Point UserPk;
+    G1Point[] TTPsPk;
 
-    function upload_pk(G1Point memory pk) public {
-        G1Point memory TTPi_pk = pk;
+    function UploadGenerator(G1Point memory generator) public {
+        g = generator;
     }
 
-    function upload_multiple_PKs(G1Point[] memory pkArray) public {
-        G1Point[] memory TPPs_PKs = new G1Point[](pkArray.length);
+    function UploadOwnerPk(G1Point memory pk) public {
+        OwnerPk = pk;
+    }
+
+    function UploadUserPk(G1Point memory pk) public {
+        UserPk = pk;
+    }
+
+    function UploadTTPsPk(G1Point[] memory pkArray) public {
+        //G1Point[] memory TPPs_PKs = new G1Point[](pkArray.length);
         for (uint i = 0; i < pkArray.length; i++) {
-            TPPs_PKs[i] = pkArray[i];
+            TTPsPk.push(pkArray[i]);
         }
     }
 
-    function upload_ciphertext(G1Point memory c0, G1Point memory c1) public {
-        Ciphertext memory ciphertext;
+    Ciphertext ciphertext;
+
+    function UploadCiphertext(G1Point memory c0, G1Point memory c1) public {
         ciphertext.C0 = c0;
         ciphertext.C1 = c1;
     }
+    
+    G1Point[] Gs;
+    G1Point[] Commiment;
 
-    function GsAndCommitment(G1Point[] memory gs, G1Point[] memory commitments) public {
-        G1Point[] memory Gs = new G1Point[](gs.length);
-        G1Point[] memory Commitments = new G1Point[](commitments.length);
+    function UploadGs(G1Point[] memory gs) public {
         for (uint i = 0; i < gs.length; i++) {
-            Gs[i] = gs[i];
-        }
-        for (uint i = 0; i < commitments.length; i++) {
-            Commitments[i] = commitments[i];
+            Gs.push(gs[i]);
         }
     }
 
-    function upload_CKey(G1Point[] memory ckeys) public {
-        G1Point[] memory CKeys = new G1Point[](ckeys.length);
+    G1Point[] CKeys ;
+    function UploadCKeys(G1Point[] memory ckeys) public {
+        //G1Point[] memory CKeys = new G1Point[](ckeys.length);
         for (uint i = 0; i < ckeys.length; i++) {
-            CKeys[i] = ckeys[i];
+            CKeys.push(ckeys[i]);
         }
     }
 
-    function upload_DLEQProof(G1Point[] memory g, G1Point[] memory y1, G1Point[] memory h, G1Point[] memory y2, uint256[] memory c, G1Point[] memory a1, G1Point[] memory a2, uint256[] memory z) public {
-        DLEQProof[] memory DLEQProofs = new DLEQProof[](g.length);
-        for (uint i = 0; i < g.length; i++) {
-            DLEQProofs[i].g = g[i];
-            DLEQProofs[i].h = h[i];
-            DLEQProofs[i].y1 = y1[i];
-            DLEQProofs[i].y2 = y2[i];
-            DLEQProofs[i].a1 = a1[i];
-            DLEQProofs[i].a2 = a2[i];
-            DLEQProofs[i].c = c[i];
-            DLEQProofs[i].z = z[i];
+    DLEQProof[] DLEQProofCKeys;
+    function UploadDLEQProofCKeys(uint256[] memory c, G1Point[] memory a1, G1Point[] memory a2, uint256[] memory z) public {
+        DLEQProof memory DLEQProofCKey;
+        for (uint i = 0; i < c.length; i++) {
+            DLEQProofCKey.c=c[i];
+            DLEQProofCKey.a1=a1[i];
+            DLEQProofCKey.a2=a2[i];
+            DLEQProofCKey.z=z[i];
+            DLEQProofCKeys.push(DLEQProofCKey);
         }
     }
 
-    function upload_DisputeProof(G1Point memory g, G1Point memory y1, G1Point memory h, G1Point memory y2, uint256 c, G1Point memory a1, G1Point memory a2, uint256 z) public {
-        DLEQProof memory Dispute;
-        Dispute.g = g;
-        Dispute.h = h;
-        Dispute.y1 = y1;
-        Dispute.y2 = y2;
-        Dispute.a1 = a1;
-        Dispute.a2 = a2;
-        Dispute.c = c;
-        Dispute.z = z;
+    DLEQProof[] DLEQProofKeys;
+    function UploadDLEQProofKeys(uint256[] memory _c, G1Point[] memory _a1, G1Point[] memory _a2, uint256[] memory _z) public {
+        DLEQProof memory DLEQProofKey;
+        for (uint i = 0; i < _c.length; i++) {
+            DLEQProofKey.a1 = _a1[i];
+            DLEQProofKey.a2 = _a2[i];
+            DLEQProofKey.c = _c[i];
+            DLEQProofKey.z = _z[i];
+            DLEQProofKeys.push(DLEQProofKey);
+        }
     }
 
+    G1Point Dispute;
 
-    function upload_EKey(G1Point[] memory EKeys0, G1Point[] memory EKeys1) public {
-        EKey[] memory EKeys = new EKey[](EKeys0.length);
+    function UploadDispute(G1Point memory Dis) public {
+        Dispute=Dis;
+    }
+
+    DLEQProof DLEQProofDis;
+    function UploadDisputeProof(uint256 c, G1Point memory a1, G1Point memory a2, uint256 z) public {
+        DLEQProofDis.a1 = a1;
+        DLEQProofDis.a2 = a2;
+        DLEQProofDis.c = c;
+        DLEQProofDis.z = z;
+    }
+
+    EKey[] EKeys;
+    function UploadEKeys(G1Point[] memory EKeys0, G1Point[] memory EKeys1) public {
+       EKey memory eKey;
         for (uint i = 0; i < EKeys0.length; i++) {
-            EKeys[i].EK0 = EKeys0[i];
-            EKeys[i].EK1 = EKeys1[i];
+            eKey.EK0 = EKeys0[i];
+            eKey.EK1 = EKeys1[i];
+            EKeys.push(eKey);
         }
     }
 
     bool[] VerificationResult;
-
-    function get() public view returns (bool[] memory) {
+    function GetVrfResult() public view returns (bool[] memory) {
         return VerificationResult;
+    }
+
+    function GetDLEQProofDis() public view returns (DLEQProof memory) {
+        return DLEQProofDis;
+    }
+
+    function GetDispute() public view returns (G1Point memory) {
+        return Dispute;
+    }
+
+    function GetUserPk() public view returns (G1Point memory) {
+        return UserPk;
+    }
+
+    function GetH() public view returns (G1Point memory) {
+        return EKeys[0].EK0;
+    }
+
+    function GetG() public view returns (G1Point memory) {
+        return g;
     }
 }
