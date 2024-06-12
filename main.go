@@ -162,14 +162,14 @@ func main() {
 	//Data user's key pair and the public key is published on the blockchain
 
 	sku, pku := ElGamal.EGSetup()
-	auth22 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx22, _ := Contract.UploadUserPk(auth22, G1ToG1Point(pku))
+	auth3 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx3, _ := Contract.UploadUserPk(auth3, G1ToG1Point(pku))
 
-	receipt22, err := bind.WaitMined(context.Background(), client, tx22)
+	receipt3, err := bind.WaitMined(context.Background(), client, tx3)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("Upload User's pk Gas used: %d\n", receipt22.GasUsed)
+	fmt.Printf("Upload User's pk Gas used: %d\n", receipt3.GasUsed)
 	//---------------------------------------Secret-Hiding-----------------------------------------//
 	// //Randomly generate a plaintext m
 	m, _ := rand.Int(rand.Reader, order)
@@ -177,13 +177,13 @@ func main() {
 	C := ThresholdElGamal.THEGEncrypt(m, pko)
 	fmt.Printf("The ciphertext C is %s\n", C)
 
-	auth3 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx3, _ := Contract.UploadCiphertext(auth3, G1ToG1Point(C.C0), G1ToG1Point(C.C1))
-	receipt3, err := bind.WaitMined(context.Background(), client, tx3)
+	auth4 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx4, _ := Contract.UploadCiphertext(auth4, G1ToG1Point(C.C0), G1ToG1Point(C.C1))
+	receipt4, err := bind.WaitMined(context.Background(), client, tx4)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("upload Ciphertext C Gas used: %d\n", receipt3.GasUsed)
+	fmt.Printf("upload Ciphertext C Gas used: %d\n", receipt4.GasUsed)
 	//Generate the PVSS shares Key of sko, the share commitment Commitments and {g^si} and publish Commitments and {g^si} on the blockchain
 	//TODO(Figure 4):test the time cost of THEGKenGen algorithm with the change of TTPs' number
 	var VSS_SK *vss.SecretSharing
@@ -201,13 +201,13 @@ func main() {
 		g1Point = G1ToG1Point(VSS_SK.Gs[i])
 		Gs = append(Gs, g1Point)
 	}
-	auth4 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx4, _ := Contract.UploadGs(auth4, Gs)
-	receipt4, err := bind.WaitMined(context.Background(), client, tx4)
+	auth5 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx5, _ := Contract.UploadGs(auth5, Gs)
+	receipt5, err := bind.WaitMined(context.Background(), client, tx5)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("upload Gs Gas used: %d\n", receipt4.GasUsed)
+	fmt.Printf("upload Gs Gas used: %d\n", receipt5.GasUsed)
 	for i := 0; i < threshold; i++ {
 		g1Point = G1ToG1Point(VSS_SK.Commitments[i])
 		Commitments = append(Commitments, g1Point)
@@ -223,13 +223,13 @@ func main() {
 		g1Point = G1ToG1Point(CKeys[i])
 		ckeys = append(ckeys, g1Point)
 	}
-	auth8 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx8, _ := Contract.UploadCKeys(auth8, ckeys)
-	receipt8, err := bind.WaitMined(context.Background(), client, tx8)
+	auth6 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx6, _ := Contract.UploadCKeys(auth6, ckeys)
+	receipt6, err := bind.WaitMined(context.Background(), client, tx6)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("Upload CKeys Gas used: %d\n", receipt8.GasUsed)
+	fmt.Printf("Upload CKeys Gas used: %d\n", receipt6.GasUsed)
 	//Data owner generates a set of DLEQProof prfs_s and publishes the prfs_s on the blockchain
 
 	mul_G := make([]*bn256.G1, numShares)
@@ -287,13 +287,13 @@ func main() {
 		Proof_c[i] = prfs_s.C[i]
 		Proof_z[i] = prfs_s.Z[i]
 	}
-	auth9 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx9, _ := Contract.UploadDLEQProofCKeys(auth9, Proof_c, Proof_gr, Proof_hr, Proof_z)
-	receipt9, err := bind.WaitMined(context.Background(), client, tx9)
+	auth7 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx7, _ := Contract.UploadDLEQProofCKeys(auth7, Proof_c, Proof_gr, Proof_hr, Proof_z)
+	receipt7, err := bind.WaitMined(context.Background(), client, tx7)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("Upload the DLEQ proofs(prfs_s) Gas used: %d\n", receipt9.GasUsed)
+	fmt.Printf("Upload the DLEQ proofs(prfs_s) Gas used: %d\n", receipt7.GasUsed)
 
 	//Data owner generates a set of DLEQProof prfs'_s and publishes the prfs'_s on the blockchain
 	_mul_H := make([]*bn256.G1, numShares)
@@ -344,13 +344,13 @@ func main() {
 		_Proof_c[i] = prfs_s.C[i]
 		_Proof_z[i] = prfs_s.Z[i]
 	}
-	auth10 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx10, _ := Contract.UploadDLEQProofKeys(auth10, _Proof_c, _Proof_gr, _Proof_hr, _Proof_z)
-	receipt10, err := bind.WaitMined(context.Background(), client, tx10)
+	auth8 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx8, _ := Contract.UploadDLEQProofKeys(auth8, _Proof_c, _Proof_gr, _Proof_hr, _Proof_z)
+	receipt8, err := bind.WaitMined(context.Background(), client, tx8)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
-	fmt.Printf("Upload the DLEQ proofs(prfs'_s) Gas used: %d\n", receipt10.GasUsed)
+	fmt.Printf("Upload the DLEQ proofs(prfs'_s) Gas used: %d\n", receipt8.GasUsed)
 
 	// //---------------------------------------Figure7 Test-------------------------------------------//
 	// //TODO(Figure 7):Test the time cost of Secret-Hiding with the change of TTPs' number(1 THEGEncrypt+1 THEGKeyGen+ 2n DLEQProof)
@@ -584,33 +584,33 @@ func main() {
 
 	// fmt.Printf("The converted set is %v\n", arr)
 
-	auth5 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx5, _ := Contract.VSSVerify(auth5, Commitments, big.NewInt(int64(numShares)), big.NewInt(int64(threshold)))
+	auth9 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx9, _ := Contract.VSSVerify(auth9, Commitments)
 	VSSResult, _ := Contract.GetVrfResult(&bind.CallOpts{})
-	receipt5, err := bind.WaitMined(context.Background(), client, tx5)
+	receipt9, err := bind.WaitMined(context.Background(), client, tx9)
 
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
 
 	fmt.Printf("VSSVerify Result: %v\n", VSSResult)
-	fmt.Printf("VSSVerify Gas used: %d\n", receipt5.GasUsed)
+	fmt.Printf("VSSVerify Gas used: %d\n", receipt9.GasUsed)
 
 	Error := dleq.Mul_Verify(prfs_s.C, prfs_s.Z, mul_G, mul_H, prfs_s.XG, prfs_s.XH, prfs_s.RG, prfs_s.RH)
 	fmt.Printf("The off-chain result of DLEQVrf(prfs_s) is %v\n", Error)
-	auth6 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx6, _ := Contract.DLEQVerifyCKeys(auth6)
+	auth10 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx10, _ := Contract.DLEQVerifyCKeys(auth10)
 	DLEQResult, _ := Contract.GetVrfResult(&bind.CallOpts{})
-	receipt6, err := bind.WaitMined(context.Background(), client, tx6)
+	receipt10, err := bind.WaitMined(context.Background(), client, tx10)
 
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
 
-	fmt.Printf("DLEQVrf Gas used: %d\n", receipt6.GasUsed)
+	fmt.Printf("DLEQVrf Gas used: %d\n", receipt10.GasUsed)
 	fmt.Printf("DLEQVrf result is %v\n", DLEQResult)
 	//TODO(Figure 8): Test the gas comsuption of Key-Verification with the change of TTPs' numbers(n VSSVerify+n DLEQVrf)
-	fmt.Printf("Figure 8: the key-verification Gas Used %v\n", receipt6.GasUsed+receipt5.GasUsed)
+	fmt.Printf("Figure 8: the key-verification Gas Used %v\n", receipt9.GasUsed+receipt10.GasUsed)
 	//-------------------------------Key-Delegation-------------------------------------//
 	//TTPs' use their private keys SKs to decrypt CKey to TTPs_Key
 	//TODO(Figure 9):Test the time cost of Key-Delagation with the change of TTPs' number(n decryption operations and n EGEncrypt)
@@ -680,14 +680,14 @@ func main() {
 	numDispute := 1 //the number of dispute
 	DIS := make([]*bn256.G1, numDispute)
 	DIS[0] = new(bn256.G1).ScalarMult(EKeys.EK0[0], sku)
-	auth24 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx24, _ := Contract.UploadDispute(auth24, G1ToG1Point(DIS[0]))
-	receipt24, err := bind.WaitMined(context.Background(), client, tx24)
+	auth12 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx12, _ := Contract.UploadDispute(auth12, G1ToG1Point(DIS[0]))
+	receipt12, err := bind.WaitMined(context.Background(), client, tx12)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
 
-	fmt.Printf("Upload a dispute Gas used: %d\n", receipt24.GasUsed)
+	fmt.Printf("Upload a dispute Gas used: %d\n", receipt12.GasUsed)
 	_xG := new(bn256.G1).ScalarMult(g, sku)
 	_xH := new(bn256.G1).ScalarMult(EKeys.EK0[0], sku)
 	//Data user generates the DLEQProof of sku prfs_sku and publishes the prfs_sku on the blockchain
@@ -706,14 +706,14 @@ func main() {
 	Dis_proof_hr := G1ToG1Point(prfs_sku.RH)
 	Dis_proof_z := prfs_sku.Z
 
-	auth12 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx12, _ := Contract.UploadDisputeProof(auth12, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
-	receipt12, err := bind.WaitMined(context.Background(), client, tx12)
+	auth13 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx13, _ := Contract.UploadDisputeProof(auth13, Dis_proof_c, Dis_proof_gr, Dis_proof_hr, Dis_proof_z)
+	receipt13, err := bind.WaitMined(context.Background(), client, tx13)
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
 
-	fmt.Printf("Upload a disputeDLEQProof(prfs_sku) Gas used: %d\n", receipt12.GasUsed)
+	fmt.Printf("Upload a disputeDLEQProof(prfs_sku) Gas used: %d\n", receipt13.GasUsed)
 	//Vefify the dispute DIS
 	starttime = time.Now().UnixMicro()
 
@@ -725,17 +725,15 @@ func main() {
 	fmt.Printf("DLEQVrf time cost %d us\n", (endtime-starttime)/n)
 	fmt.Printf("The off-chain result of dispute verification is %v\n", Error)
 	fmt.Printf("Disproof g is %v\n", g)
-	auth13 := utils.Transact(client, privatekey, big.NewInt(0))
-	tx13, _ := Contract.DLEQVerifyDis(auth13, big.NewInt(0))
-	DisputeResult, _ := Contract.GetVrfResult(&bind.CallOpts{})
-	receipt13, err := bind.WaitMined(context.Background(), client, tx13)
+	auth14 := utils.Transact(client, privatekey, big.NewInt(0))
+	tx14, _ := Contract.DLEQVerifyDis(auth14, big.NewInt(0))
+	receipt14, err := bind.WaitMined(context.Background(), client, tx14)
 
 	if err != nil {
 		log.Fatalf("Tx receipt failed: %v", err)
 	}
 
 	//TODO(Figure 11):Test the gas cost of a dispute verification
-	fmt.Printf("Figure 11: Dispute verification Gas used %v\n", receipt13.GasUsed)
-	fmt.Printf("Dispute verification result is %v\n", DisputeResult)
+	fmt.Printf("Figure 11: Dispute verification Gas used %v\n", receipt14.GasUsed)
 
 }
