@@ -1,8 +1,8 @@
-package dleq_test
+package DLEQ_test
 
 import (
 	"crypto/rand"
-	"dttp/crypto/dleq"
+	"PRE/crypto/DLEQ"
 	"fmt"
 	"math/big"
 	"testing"
