@@ -5,41 +5,42 @@ import (
 	//"fmt"
 	"math/big"
 
-	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/cloudflare"
-
+	bn256 "github.com/ethereum/go-ethereum/crypto/bn256/google"
 )
 
-//var R, _ = new(big.Int).SetString(
-	//"21888242871839275222246405745257275088548364400416034343698204186575808495617", 10)
+var order=bn256.Order
 
-type C struct {
-	C0 *bn256.G2 
-	C1 *bn256.GT
+type EK struct {
+	EK0 []*bn256.G1 
+	EK1 []*bn256.G1
 }
 
-func EGKeyGen()(*big.Int, *bn256.G1){
+func EGSetup()(*big.Int, *bn256.G1){
 	//Generate a key pair
-	sk,_ := rand.Int(rand.Reader, Q)
-	pk:=new(bn256.G1).ScalarBaseMult(sk)
-	//vk:=new(bn256.G2).ScalarBaseMult(sk)
+	sk,pk,_:=bn256.RandomG1(rand.Reader)
     return sk,pk
 }
 
-func EGEncrypt(m *bn256.GT,pk *bn256.G1,s *big.Int)(*C){
-	//fmt.Printf("The plaintxt is %s\n",new(bn256.G1).ScalarBaseMult(m).String())
-	r, _ := rand.Int(rand.Reader, Q)
-	c0 := new(bn256.G2).ScalarBaseMult(r)
-	c1 := new(bn256.GT).Add(m, bn256.Pair(new(bn256.G1).ScalarMult(pk,s), c0))
-
-	return &C{
-		C0: c0,
-		C1: c1,
+func EGEncrypt(K []*bn256.G1, PK *bn256.G1, numShares int)(*EK){
+	ek0:=make([]*bn256.G1,numShares)
+	ek1:=make([]*bn256.G1,numShares)
+	//fmt.Printf("The plaintext is %s\n",K)
+	l,_ := rand.Int(rand.Reader, order)
+	for i:=0;i<numShares;i++{
+		ek0[i]=new(bn256.G1).ScalarBaseMult(l)
+		ek1[i]=new(bn256.G1).Add(K[i],new(bn256.G1).ScalarMult(PK,l))
+	}
+	return &EK{
+		EK0:ek0,
+		EK1:ek1,
 	}
 }
 
 
-func EGDecrypt(C *C, K *bn256.G1)(*bn256.GT){
-	m:=new(bn256.GT).Add(C.C1, new(bn256.GT).Neg(bn256.Pair(K,C.C0)))
-	return m
+func EGDecrypt(EK *EK, sk *big.Int, numShares int)([]*bn256.G1){
+	_K:=make([]*bn256.G1,numShares)
+	for i:=0;i<numShares;i++{
+		_K[i]=new(bn256.G1).Add(EK.EK1[i],new(bn256.G1).Neg(new(bn256.G1).ScalarMult(EK.EK0[i],sk)))
+	}
+	return _K
 }
-

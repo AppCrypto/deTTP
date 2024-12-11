@@ -1,7 +1,7 @@
 package ElGamal_test
 
 import(
-      "PRE/crypto/ElGamal"
+      "dttp/crypto/ElGamal"
       "fmt"
       "testing"
       "crypto/rand"
