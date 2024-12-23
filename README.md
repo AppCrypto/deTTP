@@ -1,4 +1,4 @@
-# `Data exchange for the metaverse with accountable decentralized arbitrators and an incentive mechanism`
+# `Data exchange for the metaverse with accountable decentralized TTPs and incentive mechanisms`
 
 
 # Pre-requisites
