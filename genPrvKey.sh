@@ -42,4 +42,5 @@ cat ganache_output.txt | grep 'Private Keys' -A 12 | grep -o '0x.*' | while read
 done
 #这个命令在ubuntu系统中存在不会杀死ganache的bug，ganache在ubuntu启动的进程为node，使用之后，需要手动kill杀死占用端口的进程
 rm ganache_output.txt
+#ubuntu可以使用这个命令：ps -ef | grep 'ganache' | grep -v grep | awk '{print $2}' | xargs kill -9
 ps -ef|grep 'ganache'|xargs kill -9
